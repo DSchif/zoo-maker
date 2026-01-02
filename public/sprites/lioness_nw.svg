@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Lioness facing NW (top-left, world -Y direction) - front 3/4 view, no mane -->
+
+  <!-- Shadow -->
+  <ellipse cx="48" cy="84" rx="28" ry="10" fill="rgba(0,0,0,0.2)"/>
+
+  <!-- Tail (behind body) -->
+  <path d="M80 68 Q90 64 88 54" stroke="#D4A843" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="88" cy="54" r="3" fill="#8B6914"/>
+
+  <!-- Body -->
+  <ellipse cx="52" cy="64" rx="32" ry="20" fill="#D4A843"/>
+
+  <!-- Back legs (less prominent in front view) -->
+  <ellipse cx="72" cy="78" rx="7" ry="10" fill="#C49833"/>
+
+  <!-- Front legs (more prominent) -->
+  <ellipse cx="32" cy="74" rx="8" ry="14" fill="#D4A843"/>
+  <ellipse cx="52" cy="76" rx="7" ry="12" fill="#C49833"/>
+
+  <!-- Head (no mane, more slender) -->
+  <circle cx="24" cy="48" r="16" fill="#D4A843"/>
+
+  <!-- Both ears visible -->
+  <circle cx="10" cy="32" r="6" fill="#C49833"/>
+  <circle cx="36" cy="32" r="6" fill="#C49833"/>
+
+  <!-- Both eyes visible -->
+  <circle cx="14" cy="44" r="4" fill="#000"/>
+  <circle cx="32" cy="44" r="4" fill="#000"/>
+  <circle cx="13" cy="43" r="1.5" fill="#333"/>
+  <circle cx="31" cy="43" r="1.5" fill="#333"/>
+
+  <!-- Nose (centered) -->
+  <ellipse cx="23" cy="54" rx="5" ry="4" fill="#5D4037"/>
+
+  <!-- Mouth -->
+  <path d="M18 60 Q23 64 28 60" stroke="#5D4037" stroke-width="1.5" fill="none"/>
+  <line x1="23" y1="58" x2="23" y2="62" stroke="#5D4037" stroke-width="1"/>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Shadow -->
+  <ellipse cx="24" cy="44" rx="16" ry="4" fill="rgba(0,0,0,0.2)"/>
+  <!-- Back hump -->
+  <ellipse cx="20" cy="24" rx="10" ry="12" fill="#5D4037"/>
+  <!-- Body -->
+  <ellipse cx="26" cy="32" rx="18" ry="11" fill="#6D4C41"/>
+  <!-- Back legs -->
+  <rect x="10" y="34" width="6" height="10" rx="2" fill="#5D4037"/>
+  <rect x="32" y="34" width="6" height="10" rx="2" fill="#5D4037"/>
+  <!-- Front legs -->
+  <rect x="16" y="32" width="5" height="12" rx="2" fill="#6D4C41"/>
+  <rect x="28" y="32" width="5" height="12" rx="2" fill="#6D4C41"/>
+  <!-- Beard/fur -->
+  <ellipse cx="40" cy="32" rx="6" ry="8" fill="#4E342E"/>
+  <!-- Head -->
+  <ellipse cx="40" cy="26" rx="7" ry="6" fill="#5D4037"/>
+  <!-- Horns -->
+  <path d="M34 20 Q32 16 34 14" stroke="#3E2723" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M42 20 Q44 16 42 14" stroke="#3E2723" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Eye -->
+  <circle cx="42" cy="24" r="2" fill="#000"/>
+  <!-- Nose -->
+  <ellipse cx="46" cy="28" rx="2" ry="3" fill="#3E2723"/>
+  <!-- Tail -->
+  <path d="M6 30 Q2 32 4 36" stroke="#5D4037" stroke-width="2" fill="none"/>
+  <ellipse cx="4" cy="37" rx="2" ry="3" fill="#4E342E"/>
+</svg>

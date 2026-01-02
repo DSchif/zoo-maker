@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Lioness facing SE (bottom-right, world +Y direction) - rear 3/4 view, no mane -->
+
+  <!-- Shadow -->
+  <ellipse cx="48" cy="84" rx="28" ry="10" fill="rgba(0,0,0,0.2)"/>
+
+  <!-- Head (behind body, partially visible) -->
+  <circle cx="70" cy="52" r="14" fill="#D4A843"/>
+
+  <!-- Ear tips visible -->
+  <circle cx="58" cy="38" r="5" fill="#C49833"/>
+  <circle cx="78" cy="40" r="4" fill="#C49833"/>
+
+  <!-- Body -->
+  <ellipse cx="44" cy="64" rx="32" ry="20" fill="#D4A843"/>
+
+  <!-- Tail (prominent, curving up) -->
+  <path d="M16 58 Q4 52 6 40" stroke="#D4A843" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <circle cx="6" cy="40" r="4" fill="#8B6914"/>
+
+  <!-- Back legs (more prominent in rear view) -->
+  <ellipse cx="24" cy="76" rx="10" ry="12" fill="#C49833"/>
+  <ellipse cx="56" cy="78" rx="8" ry="10" fill="#C49833"/>
+
+  <!-- Front legs (partially hidden) -->
+  <ellipse cx="64" cy="74" rx="6" ry="12" fill="#D4A843"/>
+
+  <!-- Visible part of face on right side -->
+  <circle cx="82" cy="48" r="3" fill="#000"/>
+</svg>

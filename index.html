@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoo Tycoon Clone v2</title>
+    <link rel="stylesheet" href="/src/ui/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- PixiJS canvas will be inserted here -->
+        <div id="pixi-container"></div>
+
+        <!-- Top UI Bar -->
+        <div id="top-bar">
+            <div id="money-display">$<span id="money">10000</span></div>
+            <div id="zoo-name">My Zoo</div>
+            <div id="date-display">
+                <span id="day">January 1, Year 1</span>
+                <button id="speed-btn" title="Change Speed">1x</button>
+                <button id="settings-btn" title="Settings">⚙️</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="hidden">
+            <div class="settings-header">
+                <h3>Settings</h3>
+                <button id="settings-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h4>Debug Options</h4>
+                    <label class="settings-toggle">
+                        <input type="checkbox" id="show-grid-toggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Show Tile Grid with Coordinates</span>
+                    </label>
+                    <label class="settings-toggle">
+                        <input type="checkbox" id="show-fps-toggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Show FPS Counter</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tool Panel -->
+        <div id="tool-panel">
+            <button class="tool-btn active" data-tool="select" title="Select">🔍</button>
+            <button class="tool-btn" data-tool="terrain" title="Terrain">🌿</button>
+            <button class="tool-btn" data-tool="path" title="Paths">🚶</button>
+            <button class="tool-btn" data-tool="fence" title="Fences">🚧</button>
+            <button class="tool-btn" data-tool="animal" title="Animals">🦁</button>
+            <button class="tool-btn" data-tool="staff" title="Staff">👷</button>
+            <button class="tool-btn" data-tool="foliage" title="Foliage">🌳</button>
+            <button class="tool-btn" data-tool="shelter" title="Shelters">🏠</button>
+            <button class="tool-btn" data-tool="building" title="Buildings">🏪</button>
+            <button class="tool-btn" data-tool="demolish" title="Demolish">🗑️</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" id="undo-btn" title="Undo (Ctrl+Z)" disabled>↩️</button>
+        </div>
+
+        <!-- Submenu Panel -->
+        <div id="submenu-panel" class="hidden">
+            <div id="submenu-content"></div>
+        </div>
+
+        <!-- Animal Info Panel (shown when selecting animals to place) -->
+        <div id="animal-info-panel" class="hidden">
+            <div class="animal-info-header">
+                <span id="animal-info-icon"></span>
+                <div class="animal-info-title">
+                    <h3 id="animal-info-name"></h3>
+                    <span id="animal-info-scientific"></span>
+                </div>
+            </div>
+            <div class="animal-info-body">
+                <p id="animal-info-description"></p>
+
+                <!-- Gender Selector -->
+                <div class="gender-selector">
+                    <span class="gender-label">Gender:</span>
+                    <div class="gender-buttons">
+                        <button class="gender-btn active" data-gender="male">♂ Male</button>
+                        <button class="gender-btn" data-gender="female">♀ Female</button>
+                    </div>
+                </div>
+
+                <div class="animal-info-stats">
+                    <div class="animal-stat">
+                        <span class="stat-label">Diet:</span>
+                        <span id="animal-info-diet" class="stat-value"></span>
+                    </div>
+                    <div class="animal-stat">
+                        <span class="stat-label">Size:</span>
+                        <span id="animal-info-size" class="stat-value"></span>
+                    </div>
+                    <div class="animal-stat">
+                        <span class="stat-label">Lifespan:</span>
+                        <span id="animal-info-lifespan" class="stat-value"></span>
+                    </div>
+                    <div class="animal-stat">
+                        <span class="stat-label">Temperament:</span>
+                        <span id="animal-info-temperament" class="stat-value"></span>
+                    </div>
+                    <div class="animal-stat">
+                        <span class="stat-label">Group Size:</span>
+                        <span id="animal-info-group" class="stat-value"></span>
+                    </div>
+                </div>
+
+                <!-- Terrain Needs -->
+                <div class="animal-info-needs">
+                    <h4>Terrain Needs</h4>
+                    <div id="animal-info-terrain"></div>
+                </div>
+
+                <!-- Foliage Needs -->
+                <div class="animal-info-needs">
+                    <h4>Foliage Needs</h4>
+                    <div id="animal-info-foliage"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Foliage Info Panel (shown when selecting foliage to place) -->
+        <div id="foliage-info-panel" class="hidden">
+            <div class="foliage-info-header">
+                <span id="foliage-info-icon"></span>
+                <div class="foliage-info-title">
+                    <h3 id="foliage-info-name"></h3>
+                    <span id="foliage-info-biome"></span>
+                </div>
+            </div>
+            <div class="foliage-info-body">
+                <p id="foliage-info-description"></p>
+                <div class="foliage-info-stats">
+                    <div class="foliage-stat">
+                        <span class="stat-label">Height:</span>
+                        <span id="foliage-info-height" class="stat-value"></span>
+                    </div>
+                    <div class="foliage-stat">
+                        <span class="stat-label">Space per tile:</span>
+                        <span id="foliage-info-space" class="stat-value"></span>
+                    </div>
+                    <div class="foliage-stat">
+                        <span class="stat-label">Cost:</span>
+                        <span id="foliage-info-cost" class="stat-value"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div id="info-panel" class="hidden">
+            <div id="info-header">
+                <span id="info-title">Info</span>
+                <button id="info-close">✕</button>
+            </div>
+            <div id="info-content"></div>
+        </div>
+
+        <!-- Debug/Performance overlay -->
+        <div id="debug-panel" class="hidden">
+            <div>FPS: <span id="fps">0</span></div>
+            <div>Entities: <span id="entity-count">0</span></div>
+            <div>Chunks: <span id="chunk-count">0</span></div>
+        </div>
+
+        <!-- Selected Animal Info Panel (shown when clicking on an animal) -->
+        <div id="selected-animal-panel" class="hidden">
+            <div class="animal-panel-header">
+                <span id="selected-animal-icon"></span>
+                <div class="animal-panel-title">
+                    <input type="text" id="selected-animal-name" class="animal-name-input" maxlength="30">
+                    <span id="selected-animal-species"></span>
+                </div>
+                <button id="selected-animal-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="animal-panel-body">
+                <div class="animal-panel-stats">
+                    <div class="animal-stat-row">
+                        <span class="stat-label">Age:</span>
+                        <span id="selected-animal-age" class="stat-value"></span>
+                    </div>
+                    <div class="animal-stat-row">
+                        <span class="stat-label">Gender:</span>
+                        <span id="selected-animal-gender" class="stat-value"></span>
+                    </div>
+                </div>
+
+                <div class="animal-panel-bars">
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Hunger</span>
+                            <span id="selected-animal-hunger-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-animal-hunger-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Energy</span>
+                            <span id="selected-animal-energy-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-animal-energy-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group clickable" id="happiness-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Happiness <span class="expand-arrow">▶</span></span>
+                            <span id="selected-animal-happiness-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-animal-happiness-bar" class="stat-bar-fill"></div>
+                        </div>
+                        <div id="happiness-breakdown" class="happiness-breakdown hidden">
+                            <div class="breakdown-item" id="breakdown-hunger-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">🍖 Hunger</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-hunger-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-hunger-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-hunger-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-health-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">❤️ Health</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-health-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-health-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-health-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-energy-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">⚡ Energy</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-energy-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-energy-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-energy-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-terrain-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">🌍 Terrain</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-terrain-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-terrain-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-terrain-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-foliage-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">🌿 Foliage</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-foliage-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-foliage-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-foliage-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-social-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">👥 Social</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-social-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-social-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-social-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-space-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">📐 Space</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-space-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-space-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-space-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                            <div class="breakdown-item" id="breakdown-shelter-item">
+                                <div class="breakdown-row">
+                                    <span class="breakdown-label">🏠 Shelter</span>
+                                    <div class="breakdown-bar">
+                                        <div id="breakdown-shelter-bar" class="breakdown-bar-fill"></div>
+                                    </div>
+                                    <span id="breakdown-shelter-value" class="breakdown-value">100%</span>
+                                </div>
+                                <div id="breakdown-shelter-reason" class="breakdown-reason hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Health</span>
+                            <span id="selected-animal-health-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-animal-health-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="animal-panel-info">
+                    <div id="selected-animal-state" class="animal-state"></div>
+                    <div id="selected-animal-pregnancy" class="animal-pregnancy hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Staff Info Panel (shown when clicking on a staff member) -->
+        <div id="selected-staff-panel" class="hidden">
+            <div class="staff-panel-header">
+                <span id="selected-staff-icon"></span>
+                <div class="staff-panel-title">
+                    <input type="text" id="selected-staff-name" class="staff-name-input" maxlength="30">
+                    <span id="selected-staff-type"></span>
+                </div>
+                <button id="selected-staff-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="staff-panel-body">
+                <div class="staff-panel-status">
+                    <span class="status-label">Status:</span>
+                    <span id="selected-staff-state" class="status-value"></span>
+                </div>
+                <div id="selected-staff-task" class="staff-task hidden"></div>
+
+                <div class="staff-panel-section">
+                    <h4>Assigned Exhibits</h4>
+                    <div id="staff-assigned-exhibits" class="assigned-exhibits-list"></div>
+                </div>
+
+                <div class="staff-panel-section">
+                    <h4>Available Exhibits</h4>
+                    <div id="staff-available-exhibits" class="available-exhibits-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shelter Info Panel (shown when clicking on a shelter) -->
+        <div id="selected-shelter-panel" class="hidden">
+            <div class="shelter-panel-header">
+                <span id="selected-shelter-icon">🏠</span>
+                <div class="shelter-panel-title">
+                    <span id="selected-shelter-name"></span>
+                </div>
+                <button id="selected-shelter-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="shelter-panel-body">
+                <div class="shelter-panel-stats">
+                    <div class="shelter-stat-row">
+                        <span class="stat-label">Capacity:</span>
+                        <span id="selected-shelter-capacity" class="stat-value"></span>
+                    </div>
+                    <div class="shelter-stat-row">
+                        <span class="stat-label">Currently Inside:</span>
+                        <span id="selected-shelter-occupancy" class="stat-value"></span>
+                    </div>
+                </div>
+                <div class="shelter-animals-section">
+                    <h4>Animals Inside:</h4>
+                    <div id="selected-shelter-animals" class="shelter-animals-list">
+                        <span class="no-animals">No animals inside</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exhibit Info Panel (shown when clicking gate) -->
+        <div id="exhibit-info-panel" class="hidden">
+            <div class="exhibit-panel-header">
+                <span id="exhibit-panel-icon">🚪</span>
+                <div class="exhibit-panel-title">
+                    <input type="text" id="exhibit-panel-name" class="exhibit-name-input" maxlength="30">
+                </div>
+                <button id="exhibit-panel-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="exhibit-panel-body">
+                <div class="exhibit-stats">
+                    <div class="exhibit-stat">
+                        <span class="stat-label">Size:</span>
+                        <span id="exhibit-panel-size" class="stat-value"></span>
+                    </div>
+                    <div class="exhibit-stat">
+                        <span class="stat-label">Animals:</span>
+                        <span id="exhibit-panel-animals" class="stat-value"></span>
+                    </div>
+                    <div class="exhibit-stat">
+                        <span class="stat-label">Avg Happiness:</span>
+                        <span id="exhibit-panel-happiness" class="stat-value"></span>
+                    </div>
+                    <div class="exhibit-stat">
+                        <span class="stat-label">Avg Hunger:</span>
+                        <span id="exhibit-panel-hunger" class="stat-value"></span>
+                    </div>
+                </div>
+                <div class="exhibit-animal-list" id="exhibit-panel-animal-list"></div>
+                <div class="exhibit-actions">
+                    <button id="exhibit-relocate-gate-btn" class="action-btn">
+                        <span>🚪</span> Relocate Gate
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Entrance Gate Panel (shown when clicking on entrance) -->
+        <div id="entrance-panel" class="hidden">
+            <div class="entrance-panel-header">
+                <span id="entrance-panel-icon">🚪</span>
+                <div class="entrance-panel-title">
+                    <input type="text" id="entrance-zoo-name" class="zoo-name-input" maxlength="40" value="My Zoo">
+                </div>
+                <button id="entrance-panel-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="entrance-panel-body">
+                <div class="entrance-stats">
+                    <div class="entrance-stat">
+                        <span class="stat-label">Total Visitors:</span>
+                        <span id="entrance-total-visitors" class="stat-value">0</span>
+                    </div>
+                    <div class="entrance-stat">
+                        <span class="stat-label">Current Guests:</span>
+                        <span id="entrance-current-guests" class="stat-value">0</span>
+                    </div>
+                    <div class="entrance-stat">
+                        <span class="stat-label">Total Animals:</span>
+                        <span id="entrance-total-animals" class="stat-value">0</span>
+                    </div>
+                    <div class="entrance-stat">
+                        <span class="stat-label">Exhibits:</span>
+                        <span id="entrance-total-exhibits" class="stat-value">0</span>
+                    </div>
+                </div>
+                <div class="entrance-fee-section">
+                    <label for="entrance-fee-input">Entrance Fee:</label>
+                    <div class="entrance-fee-control">
+                        <span>$</span>
+                        <input type="number" id="entrance-fee-input" min="0" max="100" value="20">
+                    </div>
+                </div>
+                <div class="entrance-rating">
+                    <span class="stat-label">Zoo Rating:</span>
+                    <div id="entrance-zoo-rating" class="zoo-rating">
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star empty">★</span>
+                        <span class="star empty">★</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exhibit Creation Modal -->
+        <div id="exhibit-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-icon">🦁</span>
+                    <h2>New Exhibit Created!</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="exhibit-info">You've enclosed an area of <span id="exhibit-size">0</span> tiles.</p>
+                    <div class="input-group">
+                        <label for="exhibit-name-input">Name your exhibit:</label>
+                        <input type="text" id="exhibit-name-input" placeholder="Lion Habitat" maxlength="30">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="exhibit-cancel-btn" class="modal-btn cancel">Cancel</button>
+                    <button id="exhibit-confirm-btn" class="modal-btn confirm">Create Exhibit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

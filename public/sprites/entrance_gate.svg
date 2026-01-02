@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="200" height="140">
+  <!-- Isometric Entrance Gate - proper 2:1 isometric angle (matching tiles) -->
+
+  <!-- Back pillar (top-left position) -->
+  <g transform="translate(20, 10)">
+    <!-- Pillar left face (darker) -->
+    <polygon points="0,24 16,16 16,56 0,64" fill="#654321"/>
+    <!-- Pillar right face (lighter) -->
+    <polygon points="16,16 32,24 32,64 16,56" fill="#8B4513"/>
+    <!-- Pillar top face -->
+    <polygon points="0,24 16,16 32,24 16,32" fill="#A0522D"/>
+    <!-- Pillar cap -->
+    <polygon points="-3,21 16,12 35,21 16,30" fill="#5D4037"/>
+    <polygon points="-3,21 -3,18 16,9 16,12" fill="#4E342E"/>
+    <polygon points="16,12 35,21 35,18 16,9" fill="#6D4C41"/>
+    <!-- Ball on top -->
+    <ellipse cx="16" cy="6" rx="7" ry="4" fill="#8B4513"/>
+    <ellipse cx="17" cy="4" rx="4" ry="2.5" fill="#A0522D"/>
+  </g>
+
+  <!-- Front pillar (bottom-right position) - offset by 2:1 ratio -->
+  <g transform="translate(132, 66)">
+    <!-- Pillar left face (darker) -->
+    <polygon points="0,24 16,16 16,56 0,64" fill="#654321"/>
+    <!-- Pillar right face (lighter) -->
+    <polygon points="16,16 32,24 32,64 16,56" fill="#8B4513"/>
+    <!-- Pillar top face -->
+    <polygon points="0,24 16,16 32,24 16,32" fill="#A0522D"/>
+    <!-- Pillar cap -->
+    <polygon points="-3,21 16,12 35,21 16,30" fill="#5D4037"/>
+    <polygon points="-3,21 -3,18 16,9 16,12" fill="#4E342E"/>
+    <polygon points="16,12 35,21 35,18 16,9" fill="#6D4C41"/>
+    <!-- Ball on top -->
+    <ellipse cx="16" cy="6" rx="7" ry="4" fill="#8B4513"/>
+    <ellipse cx="17" cy="4" rx="4" ry="2.5" fill="#A0522D"/>
+  </g>
+
+  <!-- Arch beam connecting pillars - follows 2:1 isometric angle -->
+  <!-- Back pillar top is at (36, 26), Front pillar top is at (148, 82) -->
+  <!-- That's dx=112, dy=56, which is exactly 2:1 -->
+
+  <!-- Beam back face -->
+  <path d="M36 34 L148 90 L148 82 L36 26 Z" fill="#654321"/>
+  <!-- Beam top face -->
+  <path d="M36 26 L148 82 L140 86 L28 30 Z" fill="#A0522D"/>
+  <!-- Beam front face -->
+  <path d="M28 30 L140 86 L140 94 L28 38 Z" fill="#8B4513"/>
+
+  <!-- Decorative arch curve on beam - follows 2:1 angle -->
+  <path d="M38 28 C70 18 120 46 146 84" stroke="#5D4037" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M40 24 C70 15 118 42 144 80" stroke="#8B4513" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- "ZOO" sign (diamond shaped, centered on arch) -->
+  <g transform="translate(92, 52)">
+    <!-- Sign board - isometric diamond -->
+    <polygon points="-20,0 0,-10 20,0 0,10" fill="#3E2723"/>
+    <polygon points="-20,0 -20,5 0,15 20,5 20,0 0,10" fill="#4E342E"/>
+    <!-- ZOO text -->
+    <text x="0" y="4" font-family="Arial Black, sans-serif" font-size="11" font-weight="bold" fill="#FFD700" text-anchor="middle">ZOO</text>
+  </g>
+
+  <!-- Iron gate bars - following 2:1 isometric angle -->
+  <!-- Left gate section -->
+  <g opacity="0.8">
+    <line x1="48" y1="40" x2="48" y2="76" stroke="#2F4F4F" stroke-width="2.5"/>
+    <line x1="60" y1="46" x2="60" y2="82" stroke="#2F4F4F" stroke-width="2"/>
+    <line x1="72" y1="52" x2="72" y2="88" stroke="#2F4F4F" stroke-width="2"/>
+    <!-- Cross bars at 2:1 angle -->
+    <line x1="48" y1="50" x2="72" y2="62" stroke="#2F4F4F" stroke-width="1.5"/>
+    <line x1="48" y1="66" x2="72" y2="78" stroke="#2F4F4F" stroke-width="1.5"/>
+  </g>
+
+  <!-- Right gate section -->
+  <g opacity="0.8">
+    <line x1="112" y1="72" x2="112" y2="108" stroke="#2F4F4F" stroke-width="2.5"/>
+    <line x1="124" y1="78" x2="124" y2="114" stroke="#2F4F4F" stroke-width="2"/>
+    <line x1="136" y1="84" x2="136" y2="120" stroke="#2F4F4F" stroke-width="2"/>
+    <!-- Cross bars at 2:1 angle -->
+    <line x1="112" y1="82" x2="136" y2="94" stroke="#2F4F4F" stroke-width="1.5"/>
+    <line x1="112" y1="98" x2="136" y2="110" stroke="#2F4F4F" stroke-width="1.5"/>
+  </g>
+</svg>

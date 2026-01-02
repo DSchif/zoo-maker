@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Lion facing NE (top-right, world +X direction) - 3/4 view from left -->
+
+  <!-- Shadow -->
+  <ellipse cx="48" cy="84" rx="28" ry="10" fill="rgba(0,0,0,0.2)"/>
+
+  <!-- Tail -->
+  <path d="M16 64 Q6 56 8 46" stroke="#D4A843" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <circle cx="8" cy="46" r="4" fill="#8B6914"/>
+
+  <!-- Body -->
+  <ellipse cx="48" cy="64" rx="32" ry="20" fill="#D4A843"/>
+
+  <!-- Back legs -->
+  <ellipse cx="28" cy="76" rx="8" ry="12" fill="#C49833"/>
+  <ellipse cx="68" cy="76" rx="8" ry="12" fill="#C49833"/>
+
+  <!-- Front legs -->
+  <ellipse cx="36" cy="72" rx="6" ry="14" fill="#D4A843"/>
+  <ellipse cx="60" cy="72" rx="6" ry="14" fill="#D4A843"/>
+
+  <!-- Mane (male) -->
+  <circle cx="72" cy="44" r="20" fill="#B8860B"/>
+
+  <!-- Head -->
+  <circle cx="72" cy="48" r="16" fill="#D4A843"/>
+
+  <!-- Inner ear -->
+  <circle cx="60" cy="32" r="6" fill="#C49833"/>
+
+  <!-- Outer ear (behind mane) -->
+  <circle cx="76" cy="30" r="5" fill="#B8860B"/>
+
+  <!-- Eye -->
+  <circle cx="80" cy="44" r="4" fill="#000"/>
+  <circle cx="81" cy="43" r="1.5" fill="#333"/>
+
+  <!-- Nose -->
+  <ellipse cx="86" cy="52" rx="4" ry="3" fill="#5D4037"/>
+
+  <!-- Mouth line -->
+  <path d="M82 56 Q86 58 88 56" stroke="#5D4037" stroke-width="1.5" fill="none"/>
+</svg>

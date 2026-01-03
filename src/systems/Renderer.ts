@@ -3179,6 +3179,7 @@ export class Renderer {
         if (tool === 'fence') {
             // In touch mode, always show start point if set (cyan)
             if (input.touchMode && input.touchFenceStart) {
+                this.drawFenceFacingHighlight(input.touchFenceStart);
                 this.drawEdgePreview(input.touchFenceStart, 0x00ffff, 0.9); // Cyan for start point
             }
 
@@ -3186,6 +3187,7 @@ export class Renderer {
             if (input.touchMode && input.touchPlacementReady && input.touchFenceStart && input.touchFenceEnd) {
                 const edges = input.calculateLShapeEdges(input.touchFenceStart, input.touchFenceEnd);
                 for (const edge of edges) {
+                    this.drawFenceFacingHighlight(edge);
                     this.drawEdgePreview(edge, 0x00ff00, 0.8); // Green for ready to confirm
                 }
             }
@@ -3193,15 +3195,18 @@ export class Renderer {
             else if (input.isFenceDragging && input.fenceDragStart && input.hoveredEdge) {
                 const edges = input.calculateLShapeEdges(input.fenceDragStart, input.hoveredEdge);
                 for (const edge of edges) {
+                    this.drawFenceFacingHighlight(edge);
                     this.drawEdgePreview(edge, 0xffff00, 0.7);
                 }
             }
             // Touch mode selecting first point: show hovered edge preview
             else if (input.touchMode && !input.touchFenceStart && input.hoveredEdge) {
+                this.drawFenceFacingHighlight(input.hoveredEdge);
                 this.drawEdgePreview(input.hoveredEdge, 0xffff00, 0.5);
             }
             // Normal mode: just show hovered edge
             else if (!input.touchMode && input.hoveredEdge) {
+                this.drawFenceFacingHighlight(input.hoveredEdge);
                 this.drawEdgePreview(input.hoveredEdge, 0xffff00, 0.5);
             }
             return;
@@ -3568,6 +3573,25 @@ export class Renderer {
         this.overlayGraphics.moveTo(e.x1, e.y1);
         this.overlayGraphics.lineTo(e.x2, e.y2);
         this.overlayGraphics.stroke({ width: 4, color, alpha });
+    }
+
+    /**
+     * Get the tile that a fence edge is facing (the tile the fence belongs to)
+     */
+    private getFenceFacingTile(edge: TileEdge): { x: number; y: number } {
+        // The fence belongs to this tile - highlight it to show which side is "inside"
+        return { x: edge.tileX, y: edge.tileY };
+    }
+
+    /**
+     * Draw a subtle highlight on the tile a fence is facing
+     */
+    private drawFenceFacingHighlight(edge: TileEdge): void {
+        const facingTile = this.getFenceFacingTile(edge);
+        // Only draw if tile is in bounds
+        if (this.game.world.isInBounds(facingTile.x, facingTile.y)) {
+            this.drawTilePreview(facingTile.x, facingTile.y, 0x00ff00, 0.15);
+        }
     }
 
     /**

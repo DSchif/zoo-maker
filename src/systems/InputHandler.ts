@@ -108,6 +108,8 @@ export class InputHandler {
     public touchFenceEnd: TileEdge | null = null;    // Second point for fence
     public touchPathStart: GridPos | null = null;    // First point for path
     public touchPathEnd: GridPos | null = null;      // Second point for path
+    public touchDemolishStart: GridPos | null = null;  // First point for demolish
+    public touchDemolishEnd: GridPos | null = null;    // Second point for demolish
     public touchPlacementReady: boolean = false;     // True when ready to confirm
     private wasTwoFingerGesture: boolean = false;    // Track if last gesture was two-finger
 
@@ -2252,6 +2254,15 @@ export class InputHandler {
                     // Immediately start tracking as path drag
                     this.pathDragStart = this.touchPathStart;
                     this.isPathDragging = true;
+                } else if (tool === 'demolish' && this.touchDemolishStart && !this.touchPlacementReady) {
+                    // Don't pan - we're selecting second demolish point
+                    this.isTouchPanning = false;
+                    // Start tracking as demolish drag
+                    this.demolishDragStart = this.touchDemolishStart;
+                    this.isDemolishDragging = true;
+                } else if (tool === 'demolish' && !this.touchPlacementReady) {
+                    // Demolish tool - don't pan, let user tap/drag to select
+                    this.isTouchPanning = false;
                 } else if (tool === 'select' || !isPlacementTool || !hasItem || this.touchPlacementReady) {
                     // Select tool OR no placement tool OR no item - single finger pans
                     this.game.camera.startPan(pos.x, pos.y);
@@ -2300,13 +2311,27 @@ export class InputHandler {
                 const isPlacementTool = ['terrain', 'path', 'fence', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
                 const hasItem = !!this.game.currentItem;
 
-                // For fence/path with start point, update end point as we move
+                // For fence/path/demolish with start point, update end point as we move
                 if (tool === 'fence' && this.touchFenceStart && !this.touchPlacementReady) {
                     // Always update end point when dragging for fence
                     this.touchFenceEnd = this.hoveredEdge;
                 } else if (tool === 'path' && this.touchPathStart && !this.touchPlacementReady) {
                     // Always update end point when dragging for path
                     this.touchPathEnd = this.hoveredTile;
+                } else if (tool === 'demolish' && this.touchDemolishStart && !this.touchPlacementReady) {
+                    // Always update end point when dragging for demolish
+                    this.touchDemolishEnd = this.hoveredTile;
+                } else if (tool === 'demolish' && !this.touchPlacementReady) {
+                    // Demolish without start - start dragging from touch position
+                    if (distance > 10 && this.hoveredTile) {
+                        // Start a new demolish drag
+                        if (!this.touchDemolishStart) {
+                            this.touchDemolishStart = this.game.camera.getTileAt(this.touchStartPos.x, this.touchStartPos.y);
+                            this.demolishDragStart = this.touchDemolishStart;
+                            this.isDemolishDragging = true;
+                        }
+                        this.touchDemolishEnd = this.hoveredTile;
+                    }
                 } else if (tool === 'select' || !isPlacementTool || !hasItem || this.touchPlacementReady) {
                     // Select tool OR no placement tool OR no item - normal panning
                     if (distance > 10) {
@@ -2393,6 +2418,28 @@ export class InputHandler {
                         }
                     }
                 }
+                // Handle demolish tool - tap for single, drag for range, then confirm
+                else if (tool === 'demolish') {
+                    // If placement is ready, ignore all touches (only confirm/cancel buttons work)
+                    if (this.touchPlacementReady) {
+                        // Do nothing - locked until confirm or cancel
+                    } else if (this.touchDemolishStart && this.touchDemolishEnd) {
+                        // Dragged selection - ready for confirmation
+                        this.touchPlacementReady = true;
+                        const minX = Math.min(this.touchDemolishStart.x, this.touchDemolishEnd.x);
+                        const maxX = Math.max(this.touchDemolishStart.x, this.touchDemolishEnd.x);
+                        const minY = Math.min(this.touchDemolishStart.y, this.touchDemolishEnd.y);
+                        const maxY = Math.max(this.touchDemolishStart.y, this.touchDemolishEnd.y);
+                        const tileCount = (maxX - minX + 1) * (maxY - minY + 1);
+                        this.showTouchConfirmBar(`Delete ${tileCount} tile${tileCount > 1 ? 's' : ''}?`);
+                    } else if (this.hoveredTile && !this.isTouchPanning && tapDuration < 300) {
+                        // Single tap - set start and end to same tile for single deletion
+                        this.touchDemolishStart = { ...this.hoveredTile };
+                        this.touchDemolishEnd = { ...this.hoveredTile };
+                        this.touchPlacementReady = true;
+                        this.showTouchConfirmBar('Delete this tile?');
+                    }
+                }
                 // Handle other placement tools - place on release (no two-step needed with drag-to-position)
                 else {
                     const isPlacementTool = ['terrain', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
@@ -2417,9 +2464,11 @@ export class InputHandler {
             this.isFenceDragging = false;
             this.pathDragStart = null;
             this.isPathDragging = false;
+            this.demolishDragStart = null;
+            this.isDemolishDragging = false;
 
             // Don't clear hoveredTile/Edge in touch mode if we have pending placement
-            const hasPendingPlacement = this.selectedTile || this.touchFenceStart || this.touchPathStart;
+            const hasPendingPlacement = this.selectedTile || this.touchFenceStart || this.touchPathStart || this.touchDemolishStart;
             if (!this.touchMode || !hasPendingPlacement) {
                 this.hoveredTile = null;
                 this.hoveredScreenPos = null;
@@ -3199,6 +3248,16 @@ export class InputHandler {
      * Get tiles in demolish rectangle for preview
      */
     public getDemolishRectangle(): { minX: number; maxX: number; minY: number; maxY: number } | null {
+        // Check for touch demolish pending confirmation
+        if (this.touchDemolishStart && this.touchDemolishEnd) {
+            return {
+                minX: Math.min(this.touchDemolishStart.x, this.touchDemolishEnd.x),
+                maxX: Math.max(this.touchDemolishStart.x, this.touchDemolishEnd.x),
+                minY: Math.min(this.touchDemolishStart.y, this.touchDemolishEnd.y),
+                maxY: Math.max(this.touchDemolishStart.y, this.touchDemolishEnd.y),
+            };
+        }
+        // Check for mouse/live drag
         if (!this.isDemolishDragging || !this.demolishDragStart || !this.hoveredTile) {
             return null;
         }
@@ -3804,6 +3863,10 @@ export class InputHandler {
                 }
             }
         }
+        // Handle demolish placement
+        else if (tool === 'demolish' && this.touchDemolishStart && this.touchDemolishEnd) {
+            this.executeDemolishRectangle(this.touchDemolishStart, this.touchDemolishEnd);
+        }
         // Handle other tile placements
         else if (this.selectedTile) {
             // Temporarily set hovered tile to selected tile and trigger placement
@@ -3826,6 +3889,8 @@ export class InputHandler {
         this.touchFenceEnd = null;
         this.touchPathStart = null;
         this.touchPathEnd = null;
+        this.touchDemolishStart = null;
+        this.touchDemolishEnd = null;
         this.touchPlacementReady = false;
 
         // Clear drag preview state
@@ -3833,6 +3898,8 @@ export class InputHandler {
         this.isFenceDragging = false;
         this.pathDragStart = null;
         this.isPathDragging = false;
+        this.demolishDragStart = null;
+        this.isDemolishDragging = false;
 
         // Clear hover states to prevent stray highlights
         this.hoveredEdge = null;

@@ -2407,6 +2407,11 @@ export class InputHandler {
                 // Skip if same terrain
                 if (previousTerrain === terrainType) continue;
 
+                // For water, check if tile is occupied
+                if (terrainType === 'water' && this.isTileOccupied(x, y)) {
+                    continue;
+                }
+
                 if (this.game.spendMoney(costPerTile)) {
                     this.game.world.setTerrain(x, y, terrainType as any);
                     placedTiles.push({ x, y, previousTerrain });
@@ -2427,6 +2432,38 @@ export class InputHandler {
     }
 
     /**
+     * Check if a tile is occupied (has entities/structures that block water placement)
+     */
+    private isTileOccupied(x: number, y: number): boolean {
+        const tile = this.game.world.getTile(x, y);
+        if (!tile) return true;
+
+        // Check for path
+        if (tile.path) return true;
+
+        // Check for land foliage
+        const foliage = this.game.getFoliageAtTile(x, y);
+        if (foliage.length > 0) return true;
+
+        // Check for buildings/shelters
+        if (this.game.getPlaceableAtTile(x, y)) return true;
+
+        // Check for animals
+        const hasAnimal = this.game.animals.some(a => a.tileX === x && a.tileY === y);
+        if (hasAnimal) return true;
+
+        // Check for guests
+        const hasGuest = this.game.guests.some(g => g.tileX === x && g.tileY === y);
+        if (hasGuest) return true;
+
+        // Check for staff
+        const hasStaff = this.game.staff.some(s => s.tileX === x && s.tileY === y);
+        if (hasStaff) return true;
+
+        return false;
+    }
+
+    /**
      * Place path at position
      */
     private placePath(x: number, y: number, pathType: string): void {
@@ -2436,7 +2473,12 @@ export class InputHandler {
 
         const cost = costs[pathType] || 15;
         const tile = this.game.world.getTile(x, y);
-        const previousPath = tile?.path || null;
+        if (!tile) return;
+
+        // Can't place paths on water
+        if (tile.terrain === 'water') return;
+
+        const previousPath = tile.path || null;
 
         // Don't place if it's the same path
         if (previousPath === pathType) return;
@@ -2988,7 +3030,12 @@ export class InputHandler {
 
         for (const tile of tiles) {
             const existingTile = this.game.world.getTile(tile.x, tile.y);
-            const previousPath = existingTile?.path || null;
+            if (!existingTile) continue;
+
+            // Can't place paths on water
+            if (existingTile.terrain === 'water') continue;
+
+            const previousPath = existingTile.path || null;
 
             // Skip if same path already exists
             if (previousPath === pathType) continue;

@@ -78,6 +78,10 @@ export class InputHandler {
     public selectedStaff: any = null;
     private staffPanelUpdateInterval: number | null = null;
 
+    // Selected guest for info panel
+    public selectedGuest: any = null;
+    private guestPanelUpdateInterval: number | null = null;
+
     // Entrance panel state
     private entrancePanelVisible: boolean = false;
     private entrancePanelUpdateInterval: number | null = null;
@@ -1020,13 +1024,147 @@ export class InputHandler {
     }
 
     /**
+     * Show selected guest info panel
+     */
+    private showSelectedGuestPanel(guest: any): void {
+        this.selectedGuest = guest;
+
+        // Hide other panels
+        this.hideSelectedAnimalPanel();
+        this.hideSelectedStaffPanel();
+        this.hideSelectedShelterPanel();
+
+        const panel = document.getElementById('selected-guest-panel');
+        if (!panel) return;
+
+        // Update static info
+        const iconEl = document.getElementById('selected-guest-icon');
+        if (iconEl) iconEl.textContent = guest.getIcon?.() || '🧑';
+
+        // Update dynamic stats
+        this.updateSelectedGuestPanel();
+
+        // Start update interval for live stats
+        if (this.guestPanelUpdateInterval) {
+            clearInterval(this.guestPanelUpdateInterval);
+        }
+        this.guestPanelUpdateInterval = window.setInterval(() => {
+            this.updateSelectedGuestPanel();
+        }, 500);
+
+        panel.classList.remove('hidden');
+
+        // Bind close button
+        const closeBtn = document.getElementById('selected-guest-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.hideSelectedGuestPanel();
+        }
+    }
+
+    /**
+     * Update selected guest panel stats
+     */
+    private updateSelectedGuestPanel(): void {
+        if (!this.selectedGuest) return;
+
+        const guest = this.selectedGuest;
+
+        // Update state
+        const stateEl = document.getElementById('selected-guest-state');
+        if (stateEl) {
+            const stateNames: Record<string, string> = {
+                entering: 'Entering',
+                wandering: 'Exploring',
+                viewing: 'Viewing Exhibit',
+                leaving: 'Leaving',
+                left: 'Left',
+            };
+            stateEl.textContent = stateNames[guest.state] || guest.state;
+        }
+
+        // Update exhibits viewed
+        const exhibitsEl = document.getElementById('selected-guest-exhibits');
+        if (exhibitsEl) {
+            exhibitsEl.textContent = guest.exhibitsViewed?.size?.toString() || '0';
+        }
+
+        // Update visit time
+        const timeEl = document.getElementById('selected-guest-time');
+        if (timeEl) {
+            const minutes = Math.floor((guest.visitDuration || 0) / 60);
+            const seconds = Math.floor((guest.visitDuration || 0) % 60);
+            timeEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Update favorite animals
+        const favoritesEl = document.getElementById('selected-guest-favorites');
+        if (favoritesEl && guest.favoriteAnimals) {
+            const favorites = guest.favoriteAnimals.map((a: any) => `${a.icon} ${a.name}`).join(', ');
+            favoritesEl.textContent = favorites || 'None';
+        }
+
+        // Update stat bars
+        const updateBar = (id: string, valueId: string, value: number) => {
+            const bar = document.getElementById(id);
+            const valueEl = document.getElementById(valueId);
+            if (bar) {
+                bar.style.width = `${value}%`;
+                // Color based on value
+                if (value >= 70) bar.style.backgroundColor = '#2ecc71';
+                else if (value >= 40) bar.style.backgroundColor = '#f39c12';
+                else bar.style.backgroundColor = '#e74c3c';
+            }
+            if (valueEl) valueEl.textContent = `${Math.round(value)}%`;
+        };
+
+        updateBar('selected-guest-happiness-bar', 'selected-guest-happiness-value', guest.happiness || 0);
+        updateBar('selected-guest-hunger-bar', 'selected-guest-hunger-value', guest.hunger || 0);
+        updateBar('selected-guest-thirst-bar', 'selected-guest-thirst-value', guest.thirst || 0);
+        updateBar('selected-guest-energy-bar', 'selected-guest-energy-value', guest.energy || 0);
+
+        // Update happiness breakdown
+        const factors = guest.happinessFactors || {};
+        for (const [key, factor] of Object.entries(factors) as [string, any][]) {
+            const reasonEl = document.getElementById(`guest-breakdown-${key}-reason`);
+            const barEl = document.getElementById(`guest-breakdown-${key}-bar`);
+            const valueEl = document.getElementById(`guest-breakdown-${key}-value`);
+
+            if (reasonEl) reasonEl.textContent = factor.reason || '';
+            if (barEl) {
+                barEl.style.width = `${factor.value}%`;
+                if (factor.value >= 70) barEl.style.backgroundColor = '#2ecc71';
+                else if (factor.value >= 40) barEl.style.backgroundColor = '#f39c12';
+                else barEl.style.backgroundColor = '#e74c3c';
+            }
+            if (valueEl) valueEl.textContent = `${Math.round(factor.value)}%`;
+        }
+    }
+
+    /**
+     * Hide selected guest panel
+     */
+    private hideSelectedGuestPanel(): void {
+        const panel = document.getElementById('selected-guest-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+        }
+        this.selectedGuest = null;
+
+        if (this.guestPanelUpdateInterval) {
+            clearInterval(this.guestPanelUpdateInterval);
+            this.guestPanelUpdateInterval = null;
+        }
+    }
+
+    /**
      * Show selected staff info panel
      */
     private showSelectedStaffPanel(staff: any): void {
         this.selectedStaff = staff;
 
-        // Hide animal panel if open
+        // Hide other panels
         this.hideSelectedAnimalPanel();
+        this.hideSelectedGuestPanel();
 
         const panel = document.getElementById('selected-staff-panel');
         if (!panel) return;
@@ -1289,6 +1427,7 @@ export class InputHandler {
         this.hideSelectedAnimalPanel();
         this.hideSelectedStaffPanel();
         this.hideSelectedShelterPanel();
+        this.hideSelectedGuestPanel();
         this.hideExhibitPanel();
 
         const panel = document.getElementById('entrance-panel');
@@ -1337,6 +1476,25 @@ export class InputHandler {
         }
         if (zooNameEl && document.activeElement !== zooNameEl) {
             zooNameEl.value = game.zooName;
+        }
+
+        // Calculate and display average guest happiness
+        const avgHappinessEl = document.getElementById('entrance-avg-happiness');
+        const avgHappinessBar = document.getElementById('entrance-avg-happiness-bar');
+        if (avgHappinessEl || avgHappinessBar) {
+            const activeGuests = game.guests.filter((g: any) => g.state !== 'left');
+            let avgHappiness = 0;
+            if (activeGuests.length > 0) {
+                const totalHappiness = activeGuests.reduce((sum: number, g: any) => sum + (g.happiness || 0), 0);
+                avgHappiness = totalHappiness / activeGuests.length;
+            }
+            if (avgHappinessEl) avgHappinessEl.textContent = `${Math.round(avgHappiness)}%`;
+            if (avgHappinessBar) {
+                avgHappinessBar.style.width = `${avgHappiness}%`;
+                if (avgHappiness >= 70) avgHappinessBar.style.backgroundColor = '#2ecc71';
+                else if (avgHappiness >= 40) avgHappinessBar.style.backgroundColor = '#f39c12';
+                else avgHappinessBar.style.backgroundColor = '#e74c3c';
+            }
         }
 
         // Update zoo rating (simple formula based on exhibits and animals)
@@ -1499,6 +1657,41 @@ export class InputHandler {
         }
 
         return closestStaff;
+    }
+
+    /**
+     * Find guest near click position with larger hitbox
+     */
+    private findGuestNearClick(screenX: number, screenY: number): any {
+        const camera = this.game.camera;
+        let closestGuest: any = null;
+        let closestDist = 50; // Max click distance in pixels
+
+        for (const guest of this.game.guests) {
+            // Skip guests that have left
+            if (guest.state === 'left') continue;
+
+            // Get guest's world position (with sub-tile precision)
+            const worldPos = guest.getWorldPos();
+            const guestScreen = camera.tileToScreen(worldPos.x, worldPos.y);
+
+            // Convert screen click to world container coords
+            const worldX = (screenX - camera.viewportWidth / 2) / camera.zoom + camera.x;
+            const worldY = (screenY - camera.viewportHeight / 2) / camera.zoom + camera.y;
+
+            // Calculate distance (guest sprites are centered horizontally, bottom-aligned)
+            const dx = guestScreen.x - worldX;
+            const dy = (guestScreen.y - 15) - worldY; // Offset for sprite height
+
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestGuest = guest;
+            }
+        }
+
+        return closestGuest;
     }
 
     /**
@@ -1923,7 +2116,21 @@ export class InputHandler {
             if (clickedAnimal) {
                 this.hideSelectedStaffPanel();
                 this.hideSelectedShelterPanel();
+                this.hideSelectedGuestPanel();
                 this.showSelectedAnimalPanel(clickedAnimal);
+                return;
+            }
+
+            // Check for guests near the click position
+            const clickedGuest = this.findGuestNearClick(
+                this.hoveredScreenPos?.x || 0,
+                this.hoveredScreenPos?.y || 0
+            );
+            if (clickedGuest) {
+                this.hideSelectedStaffPanel();
+                this.hideSelectedShelterPanel();
+                this.hideSelectedAnimalPanel();
+                this.showSelectedGuestPanel(clickedGuest);
                 return;
             }
 
@@ -1932,6 +2139,7 @@ export class InputHandler {
             if (clickedShelter) {
                 this.hideSelectedStaffPanel();
                 this.hideSelectedAnimalPanel();
+                this.hideSelectedGuestPanel();
                 this.showSelectedShelterPanel(clickedShelter);
                 return;
             }

@@ -1811,6 +1811,120 @@ body {
 }
 
 /* ==========================================
+   Guest Panel Styles
+   ========================================== */
+
+#selected-guest-panel {
+    position: absolute;
+    right: 10px;
+    top: 70px;
+    width: 300px;
+    background: linear-gradient(180deg, #3d3d3d 0%, #2a2a2a 100%);
+    border: 2px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+#selected-guest-panel.hidden {
+    display: none;
+}
+
+.guest-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: linear-gradient(180deg, #6b5a8b 0%, #4f4366 100%);
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid #444;
+}
+
+#selected-guest-icon {
+    font-size: 28px;
+}
+
+.guest-panel-title {
+    flex: 1;
+}
+
+.guest-label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.guest-panel-body {
+    padding: 15px;
+}
+
+.guest-panel-stats {
+    background: #1a1a1a;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.guest-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.guest-stat-row .stat-label {
+    color: #888;
+}
+
+.guest-stat-row .stat-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.guest-panel-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.guest-happiness-breakdown {
+    background: #1a1a1a;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.guest-happiness-breakdown h4 {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.favorites-display {
+    font-size: 12px;
+}
+
+/* ==========================================
+   Entrance Panel Guest Happiness
+   ========================================== */
+
+.entrance-happiness-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #444;
+}
+
+.entrance-happiness-section .entrance-stat {
+    margin-bottom: 8px;
+}
+
+.entrance-happiness-bar {
+    height: 8px;
+    background: #1a1a1a;
+}
+
+/* ==========================================
    Shelter Panel Styles
    ========================================== */
 

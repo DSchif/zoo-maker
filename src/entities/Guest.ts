@@ -1,6 +1,32 @@
 import { Entity } from './Entity';
 import type { Game } from '../core/Game';
-import type { EntityType, GridPos } from '../core/types';
+import type { EntityType, GridPos, AnimalSpecies } from '../core/types';
+
+/**
+ * Happiness factor with value and reason for UI display
+ */
+interface HappinessFactor {
+    value: number;      // 0-100, where 100 is fully satisfied
+    penalty: number;    // Current penalty being applied
+    reason: string;     // Human readable reason
+}
+
+/**
+ * Animal info for guest favorites
+ */
+interface FavoriteAnimalInfo {
+    species: AnimalSpecies;
+    name: string;
+    icon: string;
+}
+
+/**
+ * All available animals that guests can have as favorites
+ */
+const ALL_ANIMALS: FavoriteAnimalInfo[] = [
+    { species: 'lion', name: 'Lion', icon: '🦁' },
+    { species: 'bison', name: 'Bison', icon: '🦬' },
+];
 
 /**
  * Guest class - visitors who walk around the zoo
@@ -18,18 +44,48 @@ export class Guest extends Entity {
     public readonly skinColor: number;
     public readonly hairColor: number;
 
-    // Guest stats
+    // Guest stats (0-100 scale, 100 = fully satisfied, 0 = critical need)
     public happiness: number = 100;
     public energy: number = 100;
+    public hunger: number = 100;    // 100 = full, 0 = starving
+    public thirst: number = 100;    // 100 = hydrated, 0 = parched
+
+    // Happiness factors breakdown (for UI display)
+    public happinessFactors: Record<string, HappinessFactor> = {
+        hunger: { value: 100, penalty: 0, reason: 'Well fed' },
+        thirst: { value: 100, penalty: 0, reason: 'Hydrated' },
+        energy: { value: 100, penalty: 0, reason: 'Energetic' },
+        exhibits: { value: 0, penalty: 0, reason: 'No exhibits viewed' },
+    };
+
+    // Decay rates (per second at 1x speed)
+    private static readonly HUNGER_DECAY = 0.4;     // ~4 minutes to get hungry
+    private static readonly THIRST_DECAY = 0.5;     // ~3.3 minutes to get thirsty
+    private static readonly ENERGY_DECAY = 0.15;    // ~11 minutes to get tired
+
+    // Happiness penalty weights (max penalty per factor)
+    private static readonly HAPPINESS_WEIGHTS = {
+        hunger: 30,     // Max 30% penalty when starving
+        thirst: 25,     // Max 25% penalty when parched
+        energy: 20,     // Max 20% penalty when exhausted
+        exhibits: 25,   // Max 25% penalty for not seeing exhibits
+    };
 
     // Visit tracking
     protected visitDuration: number = 0;
     protected maxVisitDuration: number;
-    protected exhibitsViewed: Set<number> = new Set();
+    public exhibitsViewed: Set<number> = new Set();
 
     // Leaving tracking
     protected leavingTimer: number = 0;
     protected targetEntranceX: number = 0; // Which entrance tile to target
+
+    // Favorite animals (top 2)
+    public readonly favoriteAnimals: FavoriteAnimalInfo[];
+
+    // Happiness calculation timing
+    private happinessCalculationTimer: number = 0;
+    private static readonly HAPPINESS_CALC_INTERVAL = 1; // Calculate every second
 
     constructor(game: Game, tileX: number, tileY: number) {
         super(game, tileX, tileY);
@@ -66,6 +122,10 @@ export class Guest extends Entity {
 
         // Random visit duration (5-15 minutes at 1x speed)
         this.maxVisitDuration = 300 + Math.random() * 600;
+
+        // Pick 2 random favorite animals (shuffle and take first 2)
+        const shuffled = [...ALL_ANIMALS].sort(() => Math.random() - 0.5);
+        this.favoriteAnimals = shuffled.slice(0, Math.min(2, shuffled.length));
     }
 
     /**
@@ -83,11 +143,20 @@ export class Guest extends Entity {
 
         this.updateMovement(dt);
 
-        // Energy decreases over time
-        this.energy = Math.max(0, this.energy - dt * 0.1);
+        // Apply decay rates for needs
+        this.hunger = Math.max(0, this.hunger - dt * Guest.HUNGER_DECAY);
+        this.thirst = Math.max(0, this.thirst - dt * Guest.THIRST_DECAY);
+        this.energy = Math.max(0, this.energy - dt * Guest.ENERGY_DECAY);
 
-        // Leave if visit is too long or energy is depleted
-        if (this.visitDuration >= this.maxVisitDuration || this.energy <= 0) {
+        // Calculate happiness periodically
+        this.happinessCalculationTimer += dt;
+        if (this.happinessCalculationTimer >= Guest.HAPPINESS_CALC_INTERVAL) {
+            this.happinessCalculationTimer = 0;
+            this.calculateHappiness();
+        }
+
+        // Leave if visit is too long or happiness is very low
+        if (this.visitDuration >= this.maxVisitDuration || this.happiness <= 10) {
             if (this.state !== 'leaving') {
                 this.startLeaving();
             }
@@ -253,7 +322,68 @@ export class Guest extends Entity {
         this.exhibitsViewed.add(exhibitId);
         this.state = 'viewing';
         this.stateTimer = 0;
-        this.happiness = Math.min(100, this.happiness + 10);
+    }
+
+    /**
+     * Calculate happiness based on all factors
+     * Uses subtractive penalty system: start at 100 and subtract penalties
+     */
+    protected calculateHappiness(): void {
+        // Update hunger factor
+        if (this.hunger >= 70) {
+            this.happinessFactors.hunger = { value: this.hunger, penalty: 0, reason: 'Well fed' };
+        } else if (this.hunger >= 40) {
+            const penalty = ((70 - this.hunger) / 30) * (Guest.HAPPINESS_WEIGHTS.hunger * 0.5);
+            this.happinessFactors.hunger = { value: this.hunger, penalty, reason: 'Getting hungry' };
+        } else if (this.hunger >= 20) {
+            const penalty = ((70 - this.hunger) / 50) * Guest.HAPPINESS_WEIGHTS.hunger;
+            this.happinessFactors.hunger = { value: this.hunger, penalty, reason: 'Hungry' };
+        } else {
+            this.happinessFactors.hunger = { value: this.hunger, penalty: Guest.HAPPINESS_WEIGHTS.hunger, reason: 'Starving!' };
+        }
+
+        // Update thirst factor
+        if (this.thirst >= 70) {
+            this.happinessFactors.thirst = { value: this.thirst, penalty: 0, reason: 'Hydrated' };
+        } else if (this.thirst >= 40) {
+            const penalty = ((70 - this.thirst) / 30) * (Guest.HAPPINESS_WEIGHTS.thirst * 0.5);
+            this.happinessFactors.thirst = { value: this.thirst, penalty, reason: 'Getting thirsty' };
+        } else if (this.thirst >= 20) {
+            const penalty = ((70 - this.thirst) / 50) * Guest.HAPPINESS_WEIGHTS.thirst;
+            this.happinessFactors.thirst = { value: this.thirst, penalty, reason: 'Thirsty' };
+        } else {
+            this.happinessFactors.thirst = { value: this.thirst, penalty: Guest.HAPPINESS_WEIGHTS.thirst, reason: 'Parched!' };
+        }
+
+        // Update energy factor
+        if (this.energy >= 50) {
+            this.happinessFactors.energy = { value: this.energy, penalty: 0, reason: 'Energetic' };
+        } else if (this.energy >= 25) {
+            const penalty = ((50 - this.energy) / 25) * (Guest.HAPPINESS_WEIGHTS.energy * 0.5);
+            this.happinessFactors.energy = { value: this.energy, penalty, reason: 'Getting tired' };
+        } else {
+            const penalty = ((50 - this.energy) / 50) * Guest.HAPPINESS_WEIGHTS.energy;
+            this.happinessFactors.energy = { value: this.energy, penalty, reason: 'Exhausted' };
+        }
+
+        // Update exhibits factor - reward for seeing exhibits
+        const exhibitCount = this.exhibitsViewed.size;
+        if (exhibitCount >= 3) {
+            this.happinessFactors.exhibits = { value: 100, penalty: 0, reason: `Seen ${exhibitCount} exhibits!` };
+        } else if (exhibitCount >= 1) {
+            const penalty = Guest.HAPPINESS_WEIGHTS.exhibits * (1 - exhibitCount / 3);
+            this.happinessFactors.exhibits = { value: exhibitCount * 33, penalty, reason: `Seen ${exhibitCount} exhibit${exhibitCount > 1 ? 's' : ''}` };
+        } else {
+            this.happinessFactors.exhibits = { value: 0, penalty: Guest.HAPPINESS_WEIGHTS.exhibits, reason: 'No exhibits viewed' };
+        }
+
+        // Calculate total happiness (100 minus all penalties)
+        let totalPenalty = 0;
+        for (const factor of Object.values(this.happinessFactors)) {
+            totalPenalty += factor.penalty;
+        }
+
+        this.happiness = Math.max(0, Math.min(100, 100 - totalPenalty));
     }
 
     /**

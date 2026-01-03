@@ -384,6 +384,120 @@
             </div>
         </div>
 
+        <!-- Selected Guest Info Panel (shown when clicking on a guest) -->
+        <div id="selected-guest-panel" class="hidden">
+            <div class="guest-panel-header">
+                <span id="selected-guest-icon">🧑</span>
+                <div class="guest-panel-title">
+                    <span class="guest-label">Guest</span>
+                </div>
+                <button id="selected-guest-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="guest-panel-body">
+                <div class="guest-panel-stats">
+                    <div class="guest-stat-row">
+                        <span class="stat-label">Status:</span>
+                        <span id="selected-guest-state" class="stat-value">Exploring</span>
+                    </div>
+                    <div class="guest-stat-row">
+                        <span class="stat-label">Exhibits Viewed:</span>
+                        <span id="selected-guest-exhibits" class="stat-value">0</span>
+                    </div>
+                    <div class="guest-stat-row">
+                        <span class="stat-label">Visit Time:</span>
+                        <span id="selected-guest-time" class="stat-value">0:00</span>
+                    </div>
+                    <div class="guest-stat-row">
+                        <span class="stat-label">Favorites:</span>
+                        <span id="selected-guest-favorites" class="stat-value favorites-display"></span>
+                    </div>
+                </div>
+
+                <div class="guest-panel-bars">
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Happiness</span>
+                            <span id="selected-guest-happiness-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-guest-happiness-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Hunger</span>
+                            <span id="selected-guest-hunger-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-guest-hunger-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Thirst</span>
+                            <span id="selected-guest-thirst-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-guest-thirst-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="stat-bar-group">
+                        <div class="stat-bar-label">
+                            <span>Energy</span>
+                            <span id="selected-guest-energy-value">100%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="selected-guest-energy-bar" class="stat-bar-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guest-happiness-breakdown">
+                    <h4>Happiness Factors</h4>
+                    <div class="breakdown-item">
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Hunger</span>
+                            <div class="breakdown-bar">
+                                <div id="guest-breakdown-hunger-bar" class="breakdown-bar-fill"></div>
+                            </div>
+                            <span id="guest-breakdown-hunger-value" class="breakdown-value">100%</span>
+                        </div>
+                        <div id="guest-breakdown-hunger-reason" class="breakdown-reason"></div>
+                    </div>
+                    <div class="breakdown-item">
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Thirst</span>
+                            <div class="breakdown-bar">
+                                <div id="guest-breakdown-thirst-bar" class="breakdown-bar-fill"></div>
+                            </div>
+                            <span id="guest-breakdown-thirst-value" class="breakdown-value">100%</span>
+                        </div>
+                        <div id="guest-breakdown-thirst-reason" class="breakdown-reason"></div>
+                    </div>
+                    <div class="breakdown-item">
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Energy</span>
+                            <div class="breakdown-bar">
+                                <div id="guest-breakdown-energy-bar" class="breakdown-bar-fill"></div>
+                            </div>
+                            <span id="guest-breakdown-energy-value" class="breakdown-value">100%</span>
+                        </div>
+                        <div id="guest-breakdown-energy-reason" class="breakdown-reason"></div>
+                    </div>
+                    <div class="breakdown-item">
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Exhibits</span>
+                            <div class="breakdown-bar">
+                                <div id="guest-breakdown-exhibits-bar" class="breakdown-bar-fill"></div>
+                            </div>
+                            <span id="guest-breakdown-exhibits-value" class="breakdown-value">0%</span>
+                        </div>
+                        <div id="guest-breakdown-exhibits-reason" class="breakdown-reason"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Shelter Info Panel (shown when clicking on a shelter) -->
         <div id="selected-shelter-panel" class="hidden">
             <div class="shelter-panel-header">
@@ -476,6 +590,15 @@
                     <div class="entrance-stat">
                         <span class="stat-label">Exhibits:</span>
                         <span id="entrance-total-exhibits" class="stat-value">0</span>
+                    </div>
+                </div>
+                <div class="entrance-happiness-section">
+                    <div class="entrance-stat">
+                        <span class="stat-label">Guest Happiness:</span>
+                        <span id="entrance-avg-happiness" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-bar entrance-happiness-bar">
+                        <div id="entrance-avg-happiness-bar" class="stat-bar-fill"></div>
                     </div>
                 </div>
                 <div class="entrance-fee-section">

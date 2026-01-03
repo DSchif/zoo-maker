@@ -86,6 +86,10 @@ export class InputHandler {
     public selectedGuest: any = null;
     private guestPanelUpdateInterval: number | null = null;
 
+    // Selected building for info panel
+    public selectedBuilding: any = null;
+    private buildingPanelUpdateInterval: number | null = null;
+
     // Entrance panel state
     private entrancePanelVisible: boolean = false;
     private entrancePanelUpdateInterval: number | null = null;
@@ -223,6 +227,12 @@ export class InputHandler {
             } else {
                 debugPanel?.classList.add('hidden');
             }
+        });
+
+        // Interaction points toggle
+        const showInteractionsToggle = document.getElementById('show-interactions-toggle') as HTMLInputElement;
+        showInteractionsToggle?.addEventListener('change', () => {
+            this.game.showInteractionPoints = showInteractionsToggle.checked;
         });
 
         // Touch mode toggle
@@ -852,6 +862,12 @@ export class InputHandler {
     private showSelectedAnimalPanel(animal: any): void {
         this.selectedAnimal = animal;
 
+        // Hide other panels
+        this.hideSelectedGuestPanel();
+        this.hideSelectedStaffPanel();
+        this.hideSelectedShelterPanel();
+        this.hideSelectedBuildingPanel();
+
         const panel = document.getElementById('selected-animal-panel');
         if (!panel) return;
 
@@ -1065,6 +1081,7 @@ export class InputHandler {
         this.hideSelectedAnimalPanel();
         this.hideSelectedStaffPanel();
         this.hideSelectedShelterPanel();
+        this.hideSelectedBuildingPanel();
 
         const panel = document.getElementById('selected-guest-panel');
         if (!panel) return;
@@ -1189,6 +1206,170 @@ export class InputHandler {
     }
 
     /**
+     * Show selected building info panel
+     */
+    private showSelectedBuildingPanel(building: any): void {
+        this.selectedBuilding = building;
+
+        // Hide other panels
+        this.hideSelectedAnimalPanel();
+        this.hideSelectedGuestPanel();
+        this.hideSelectedStaffPanel();
+        this.hideSelectedShelterPanel();
+
+        const panel = document.getElementById('selected-building-panel');
+        if (!panel) return;
+
+        // Update static info
+        const iconEl = document.getElementById('selected-building-icon');
+        const nameEl = document.getElementById('selected-building-name');
+        if (iconEl) iconEl.textContent = building.config?.icon || '🏪';
+        if (nameEl) nameEl.textContent = building.config?.name || 'Building';
+
+        // Update menu section visibility (only for vendors)
+        const menuSection = document.getElementById('building-menu-section');
+        if (menuSection) {
+            if (building.getItems) {
+                menuSection.classList.remove('hidden');
+                this.updateBuildingMenu(building);
+            } else {
+                menuSection.classList.add('hidden');
+            }
+        }
+
+        // Update dynamic stats
+        this.updateSelectedBuildingPanel();
+
+        // Start update interval for live stats
+        if (this.buildingPanelUpdateInterval) {
+            clearInterval(this.buildingPanelUpdateInterval);
+        }
+        this.buildingPanelUpdateInterval = window.setInterval(() => {
+            this.updateSelectedBuildingPanel();
+        }, 500);
+
+        panel.classList.remove('hidden');
+
+        // Bind close button
+        const closeBtn = document.getElementById('selected-building-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.hideSelectedBuildingPanel();
+        }
+
+        // Bind toggle button
+        const toggleBtn = document.getElementById('selected-building-toggle');
+        if (toggleBtn) {
+            toggleBtn.onclick = () => {
+                if (this.selectedBuilding) {
+                    this.selectedBuilding.toggle();
+                    this.updateSelectedBuildingPanel();
+                }
+            };
+        }
+    }
+
+    /**
+     * Update building menu display
+     */
+    private updateBuildingMenu(building: any): void {
+        const menuEl = document.getElementById('selected-building-menu');
+        if (!menuEl) return;
+
+        const items = building.getItems?.() || [];
+        if (items.length === 0) {
+            menuEl.innerHTML = '<div class="menu-empty">No items</div>';
+            return;
+        }
+
+        menuEl.innerHTML = items.map((item: any) => {
+            const emoji = this.getFoodEmoji(item.name);
+            return `
+                <div class="menu-item">
+                    <span class="menu-item-icon">${emoji}</span>
+                    <span class="menu-item-name">${item.name}</span>
+                    <span class="menu-item-price">$${item.price}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Get food emoji for a food item name
+     */
+    private getFoodEmoji(name: string): string {
+        const emojis: Record<string, string> = {
+            'Burger': '🍔',
+            'Fries': '🍟',
+            'Soda': '🥤',
+            'Water': '💧',
+            'Lemonade': '🍋',
+            'Chips': '🍿',
+            'Candy': '🍬',
+        };
+        return emojis[name] || '🍽️';
+    }
+
+    /**
+     * Update selected building panel stats
+     */
+    private updateSelectedBuildingPanel(): void {
+        if (!this.selectedBuilding) return;
+
+        const building = this.selectedBuilding;
+
+        // Update status
+        const statusEl = document.getElementById('selected-building-status');
+        if (statusEl) {
+            statusEl.textContent = building.isOpen ? 'Open' : 'Closed';
+            statusEl.className = 'building-status ' + (building.isOpen ? 'status-open' : 'status-closed');
+        }
+
+        // Update guests served
+        const servedEl = document.getElementById('selected-building-served');
+        if (servedEl) {
+            servedEl.textContent = (building.getTotalUses?.() || 0).toString();
+        }
+
+        const servedTodayEl = document.getElementById('selected-building-served-today');
+        if (servedTodayEl) {
+            servedTodayEl.textContent = (building.getTodayUses?.() || 0).toString();
+        }
+
+        // Update revenue
+        const revenueEl = document.getElementById('selected-building-revenue');
+        if (revenueEl) {
+            revenueEl.textContent = '$' + (building.getTotalRevenue?.() || 0).toLocaleString();
+        }
+
+        const revenueTodayEl = document.getElementById('selected-building-revenue-today');
+        if (revenueTodayEl) {
+            revenueTodayEl.textContent = '$' + (building.getTodayRevenue?.() || 0).toLocaleString();
+        }
+
+        // Update toggle button text
+        const toggleBtn = document.getElementById('selected-building-toggle');
+        if (toggleBtn) {
+            toggleBtn.textContent = building.isOpen ? 'Close Shop' : 'Open Shop';
+        }
+    }
+
+    /**
+     * Hide selected building panel
+     */
+    private hideSelectedBuildingPanel(): void {
+        const panel = document.getElementById('selected-building-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+        }
+        this.selectedBuilding = null;
+
+        if (this.buildingPanelUpdateInterval) {
+            clearInterval(this.buildingPanelUpdateInterval);
+            this.buildingPanelUpdateInterval = null;
+        }
+    }
+
+    /**
      * Show selected staff info panel
      */
     private showSelectedStaffPanel(staff: any): void {
@@ -1197,6 +1378,7 @@ export class InputHandler {
         // Hide other panels
         this.hideSelectedAnimalPanel();
         this.hideSelectedGuestPanel();
+        this.hideSelectedBuildingPanel();
 
         const panel = document.getElementById('selected-staff-panel');
         if (!panel) return;
@@ -1459,6 +1641,7 @@ export class InputHandler {
         this.hideSelectedAnimalPanel();
         this.hideSelectedStaffPanel();
         this.hideSelectedShelterPanel();
+        this.hideSelectedBuildingPanel();
         this.hideSelectedGuestPanel();
         this.hideExhibitPanel();
 
@@ -2182,7 +2365,19 @@ export class InputHandler {
                     this.hideSelectedStaffPanel();
                     this.hideSelectedAnimalPanel();
                     this.hideSelectedGuestPanel();
+                    this.hideSelectedBuildingPanel();
                     this.showSelectedShelterPanel(clickedShelter);
+                    return;
+                }
+
+                // Check for building clicks (vendors, amenities, etc.)
+                const clickedBuilding = this.game.getBuildingAtTile(x, y);
+                if (clickedBuilding) {
+                    this.hideSelectedStaffPanel();
+                    this.hideSelectedAnimalPanel();
+                    this.hideSelectedGuestPanel();
+                    this.hideSelectedShelterPanel();
+                    this.showSelectedBuildingPanel(clickedBuilding);
                     return;
                 }
             }

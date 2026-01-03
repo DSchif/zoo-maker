@@ -1,6 +1,12 @@
 import { Building } from './Building';
 import type { Game } from '../../core/Game';
 import { PLACEABLE_CONFIGS } from '../../core/types';
+import type { GuestFoodCategory } from '../../core/types';
+
+/**
+ * How the food item is consumed
+ */
+export type ConsumptionType = 'immediate' | 'walking' | 'sitting';
 
 /**
  * Item sold by a vendor
@@ -9,7 +15,10 @@ export interface VendorItem {
     name: string;
     price: number;
     type: 'food' | 'drink' | 'snack';
-    satisfaction: number;  // How much hunger/thirst this satisfies (0-100)
+    category: GuestFoodCategory;          // Food category for guest preferences
+    satisfaction: number;                  // How much hunger/thirst this satisfies (0-100)
+    consumptionType: ConsumptionType;     // How this food is consumed
+    happinessBonus?: number;              // Optional bonus happiness (e.g., desserts)
 }
 
 /**
@@ -214,8 +223,8 @@ export class BurgerStand extends FoodStand {
         super(game, 'burger_stand', tileX, tileY, rotation, 'burger');
 
         this.items = [
-            { name: 'Burger', price: 10, type: 'food', satisfaction: 40 },
-            { name: 'Fries', price: 5, type: 'snack', satisfaction: 20 },
+            { name: 'Burger', price: 10, type: 'food', category: 'fast_food', satisfaction: 40, consumptionType: 'sitting' },
+            { name: 'Fries', price: 5, type: 'snack', category: 'snack', satisfaction: 20, consumptionType: 'sitting' },
         ];
     }
 }
@@ -229,10 +238,11 @@ export class DrinkStand extends Vendor {
         this.requiresStaff = false;
         this.serviceTime = 2;
 
+        // Drinks use 'snack' category as they're quick refreshments
         this.items = [
-            { name: 'Soda', price: 5, type: 'drink', satisfaction: 30 },
-            { name: 'Water', price: 3, type: 'drink', satisfaction: 25 },
-            { name: 'Lemonade', price: 6, type: 'drink', satisfaction: 35 },
+            { name: 'Soda', price: 5, type: 'drink', category: 'snack', satisfaction: 30, consumptionType: 'walking' },
+            { name: 'Water', price: 3, type: 'drink', category: 'snack', satisfaction: 25, consumptionType: 'walking' },
+            { name: 'Lemonade', price: 6, type: 'drink', category: 'snack', satisfaction: 35, consumptionType: 'walking' },
         ];
     }
 }
@@ -248,9 +258,9 @@ export class VendingMachine extends Vendor {
         this.serviceTime = 2;
 
         this.items = [
-            { name: 'Soda', price: 4, type: 'drink', satisfaction: 25 },
-            { name: 'Chips', price: 3, type: 'snack', satisfaction: 15 },
-            { name: 'Candy', price: 2, type: 'snack', satisfaction: 10 },
+            { name: 'Soda', price: 4, type: 'drink', category: 'snack', satisfaction: 25, consumptionType: 'walking' },
+            { name: 'Chips', price: 3, type: 'snack', category: 'snack', satisfaction: 15, consumptionType: 'walking' },
+            { name: 'Candy', price: 2, type: 'snack', category: 'dessert', satisfaction: 10, consumptionType: 'walking', happinessBonus: 5 },
         ];
 
         // Start with some stock

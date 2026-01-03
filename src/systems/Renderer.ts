@@ -1660,6 +1660,135 @@ export class Renderer {
                     break;
             }
         }
+
+        // Draw interaction point debug overlays if enabled
+        if (this.game.showInteractionPoints) {
+            this.drawInteractionPointOverlays();
+        }
+    }
+
+    /**
+     * Draw debug overlays showing interaction points on all placeables
+     */
+    private drawInteractionPointOverlays(): void {
+        const g = this.getPooledGraphics();
+        g.zIndex = 10000; // Draw on top of everything
+
+        // Draw for all shelters
+        for (const shelter of this.game.shelters) {
+            this.drawPlaceableInteractionPoints(g, shelter);
+        }
+
+        // Draw for all buildings
+        for (const building of this.game.buildings) {
+            this.drawPlaceableInteractionPoints(g, building);
+        }
+    }
+
+    /**
+     * Draw interaction point highlights for a single placeable
+     */
+    private drawPlaceableInteractionPoints(graphics: Graphics, placeable: Placeable): void {
+        const interactionPoints = placeable.getInteractionPoints();
+
+        for (const point of interactionPoints) {
+            const hw = TILE_WIDTH / 2;
+            const hh = TILE_HEIGHT / 2;
+
+            // Choose color based on interaction type
+            let color: number;
+            switch (point.type) {
+                case 'enter':
+                    color = 0x00ff00; // Green for entrances
+                    break;
+                case 'purchase':
+                    color = 0xffff00; // Yellow for purchase points
+                    break;
+                case 'sit':
+                    color = 0x00ffff; // Cyan for seats
+                    break;
+                case 'use':
+                    color = 0xff00ff; // Magenta for use points
+                    break;
+                case 'work':
+                    color = 0xff8800; // Orange for work points
+                    break;
+                default:
+                    color = 0xffffff; // White for unknown
+            }
+
+            // Get screen position of the interaction tile (on building)
+            const screenPos = this.game.camera.tileToScreen(point.worldX, point.worldY);
+
+            // Draw interaction tile highlight (where the interaction happens)
+            graphics.poly([
+                { x: screenPos.x, y: screenPos.y - hh },
+                { x: screenPos.x + hw, y: screenPos.y },
+                { x: screenPos.x, y: screenPos.y + hh },
+                { x: screenPos.x - hw, y: screenPos.y },
+            ]);
+            graphics.fill({ color, alpha: 0.4 });
+            graphics.stroke({ color, width: 2, alpha: 0.8 });
+
+            // For 'approach' type, also show where the entity stands
+            if (point.approach === 'approach') {
+                // Calculate approach tile position
+                let approachX = point.worldX;
+                let approachY = point.worldY;
+                switch (point.worldFacing) {
+                    case 'south': approachX += 1; break;
+                    case 'north': approachX -= 1; break;
+                    case 'west': approachY += 1; break;
+                    case 'east': approachY -= 1; break;
+                }
+
+                const approachScreenPos = this.game.camera.tileToScreen(approachX, approachY);
+
+                // Draw approach tile (where entity stands) with dashed outline
+                graphics.poly([
+                    { x: approachScreenPos.x, y: approachScreenPos.y - hh },
+                    { x: approachScreenPos.x + hw, y: approachScreenPos.y },
+                    { x: approachScreenPos.x, y: approachScreenPos.y + hh },
+                    { x: approachScreenPos.x - hw, y: approachScreenPos.y },
+                ]);
+                graphics.fill({ color: 0x00ff00, alpha: 0.25 }); // Green for standing position
+                graphics.stroke({ color: 0x00ff00, width: 2, alpha: 0.8 });
+
+                // Draw connecting line from approach to interaction
+                graphics.moveTo(approachScreenPos.x, approachScreenPos.y);
+                graphics.lineTo(screenPos.x, screenPos.y);
+                graphics.stroke({ color: 0xffffff, width: 1, alpha: 0.6 });
+
+                // Draw person icon on approach tile
+                graphics.circle(approachScreenPos.x, approachScreenPos.y - 5, 4);
+                graphics.fill(0x00ff00);
+            }
+
+            // Draw arrow showing facing direction on interaction tile
+            const arrowLength = 12;
+            let arrowDx = 0, arrowDy = 0;
+            switch (point.worldFacing) {
+                case 'north': arrowDx = -arrowLength; arrowDy = -arrowLength / 2; break;
+                case 'south': arrowDx = arrowLength; arrowDy = arrowLength / 2; break;
+                case 'east': arrowDx = arrowLength; arrowDy = -arrowLength / 2; break;
+                case 'west': arrowDx = -arrowLength; arrowDy = arrowLength / 2; break;
+            }
+
+            graphics.moveTo(screenPos.x, screenPos.y);
+            graphics.lineTo(screenPos.x + arrowDx, screenPos.y + arrowDy);
+            graphics.stroke({ color: 0xffffff, width: 2 });
+
+            graphics.circle(screenPos.x + arrowDx, screenPos.y + arrowDy, 3);
+            graphics.fill(0xffffff);
+
+            // Draw capacity indicator if > 1
+            const capacity = point.capacity || 1;
+            if (capacity > 1) {
+                graphics.circle(screenPos.x, screenPos.y - 15, 8);
+                graphics.fill({ color: 0x000000, alpha: 0.7 });
+                graphics.stroke({ color: 0xffffff, width: 1 });
+            }
+        }
     }
 
     /**
@@ -2182,6 +2311,28 @@ export class Renderer {
         // Face direction (eye)
         graphics.circle(x + 2 * facing, y - 24 - bodyBob, 1);
         graphics.fill(0x000000);
+
+        // Food emoji above head when eating
+        const foodEmoji = guest.getFoodEmoji?.();
+        if (foodEmoji && (guest.state === 'eating' || guest.state === 'eating_walking' || guest.state === 'seeking_seat')) {
+            this.drawTextAbove(graphics, x, y - 35 - bodyBob, foodEmoji);
+        }
+    }
+
+    /**
+     * Draw text/emoji above an entity
+     */
+    private drawTextAbove(graphics: Graphics, x: number, y: number, text: string): void {
+        // Draw a small white background circle for the emoji
+        graphics.circle(x, y, 8);
+        graphics.fill({ color: 0xffffff, alpha: 0.9 });
+        graphics.stroke({ color: 0x000000, alpha: 0.3, width: 1 });
+
+        // We can't draw actual text with Graphics, so we'll use a colored circle as placeholder
+        // The actual emoji rendering would need a Text or BitmapText object
+        // For now, let's draw a simple food indicator
+        graphics.circle(x, y, 5);
+        graphics.fill(0xFFD700);  // Gold color for food
     }
 
     /**

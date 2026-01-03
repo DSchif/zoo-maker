@@ -69,6 +69,11 @@
                         <span class="toggle-slider"></span>
                         <span class="toggle-label">Show FPS Counter</span>
                     </label>
+                    <label class="settings-toggle">
+                        <input type="checkbox" id="show-interactions-toggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Show Interaction Points</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -501,6 +506,47 @@
                         </div>
                         <div id="guest-breakdown-exhibits-reason" class="breakdown-reason"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Building Info Panel (shown when clicking on a building/vendor) -->
+        <div id="selected-building-panel" class="hidden">
+            <div class="building-panel-header">
+                <span id="selected-building-icon">🏪</span>
+                <div class="building-panel-title">
+                    <span id="selected-building-name">Building</span>
+                    <span id="selected-building-status" class="building-status"></span>
+                </div>
+                <button id="selected-building-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="building-panel-body">
+                <div class="building-panel-stats">
+                    <div class="building-stat-row">
+                        <span class="stat-label">Guests Served:</span>
+                        <span id="selected-building-served" class="stat-value">0</span>
+                    </div>
+                    <div class="building-stat-row">
+                        <span class="stat-label">Today:</span>
+                        <span id="selected-building-served-today" class="stat-value">0</span>
+                    </div>
+                    <div class="building-stat-row">
+                        <span class="stat-label">Total Revenue:</span>
+                        <span id="selected-building-revenue" class="stat-value">$0</span>
+                    </div>
+                    <div class="building-stat-row">
+                        <span class="stat-label">Today's Revenue:</span>
+                        <span id="selected-building-revenue-today" class="stat-value">$0</span>
+                    </div>
+                </div>
+
+                <div id="building-menu-section" class="building-menu-section">
+                    <h4>Menu</h4>
+                    <div id="selected-building-menu" class="building-menu-list"></div>
+                </div>
+
+                <div class="building-panel-actions">
+                    <button id="selected-building-toggle" class="action-btn">Close Shop</button>
                 </div>
             </div>
         </div>

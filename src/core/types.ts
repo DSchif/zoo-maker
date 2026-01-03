@@ -90,8 +90,11 @@ export const SHELTER_CONFIGS: Record<ShelterSize, { width: number; depth: number
     large: { width: 3, depth: 2, name: 'Large' },      // 6 tiles (3x2)
 };
 
-// Food types
+// Food types (for animals)
 export type FoodType = 'meat' | 'vegetables' | 'fruit' | 'hay';
+
+// Guest food categories
+export type GuestFoodCategory = 'fast_food' | 'restaurant' | 'snack' | 'dessert';
 
 // Animal state
 export type AnimalState = 'idle' | 'walking' | 'eating' | 'sleeping' | 'resting';
@@ -162,6 +165,11 @@ export const ISO = {
 // Interaction point types
 export type InteractionType = 'enter' | 'use' | 'queue' | 'work' | 'sit' | 'rest' | 'purchase';
 
+// How entity approaches the interaction point
+// 'inside' - entity walks onto the interaction tile (shelter entrance, restaurant)
+// 'approach' - entity stands adjacent to tile, facing the interaction point (burger stand counter, vending machine)
+export type ApproachType = 'inside' | 'approach';
+
 // Entity types that can interact
 export type InteractingEntityType = 'animal' | 'guest' | 'staff';
 
@@ -182,6 +190,9 @@ export interface InteractionPoint {
 
     // Optional: capacity for this point (default 1)
     capacity?: number;
+
+    // How to approach this interaction (default 'inside')
+    approach?: ApproachType;
 }
 
 // Placeable category
@@ -216,7 +227,7 @@ export interface PlaceableConfig {
 // Placeable types registry
 export type PlaceableType =
     | 'shelter_small' | 'shelter_regular' | 'shelter_large'
-    | 'bench' | 'garbage_can' | 'bathroom'
+    | 'bench' | 'picnic_table' | 'garbage_can' | 'bathroom'
     | 'gift_shop' | 'restaurant'
     | 'burger_stand' | 'drink_stand' | 'vending_machine'
     | 'indoor_attraction';
@@ -282,6 +293,20 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
             { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 }
         ]
     },
+    picnic_table: {
+        name: 'Picnic Table',
+        icon: '🪵',
+        width: 2,
+        depth: 2,
+        category: 'amenity',
+        cost: 150,
+        interactions: [
+            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 },
+            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 },
+            { relativeX: 0, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1 },
+            { relativeX: 1, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1 }
+        ]
+    },
     garbage_can: {
         name: 'Garbage Can',
         icon: '🗑️',
@@ -343,8 +368,8 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         purchasePrice: 10,
         interactions: [
             // Single service window on front-right wall (south face)
-            // Rotates with building - guests approach from outside to purchase
-            { relativeX: 1, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2 }
+            // Guests approach from outside (stand adjacent) to purchase
+            { relativeX: 1, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'approach' }
         ],
         style: 'burger_stand'
     },
@@ -358,7 +383,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 1000,
         purchasePrice: 5,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2 }
+            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'approach' }
         ],
         style: 'drink_stand'
     },
@@ -372,7 +397,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 800,
         purchasePrice: 4,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 1 }
+            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 1, approach: 'approach' }
         ],
         style: 'vending_machine'
     },

@@ -2,7 +2,7 @@ import { Application } from 'pixi.js';
 import { Camera } from './Camera';
 import { World } from './World';
 import { GameConfig, DEFAULT_CONFIG, GameSpeed, ToolType, AnimalSpecies, FoliageType, FoodType, Gender, FenceCondition, EdgeDirection, ShelterType, ShelterSize, PLACEABLE_CONFIGS } from './types';
-import { Building, BurgerStand, DrinkStand, VendingMachine, Bathroom, GarbageCan, GiftShop, Restaurant, IndoorAttraction } from '../entities/buildings';
+import { Building, Vendor, BurgerStand, DrinkStand, VendingMachine, Bathroom, GarbageCan, GiftShop, Restaurant, IndoorAttraction } from '../entities/buildings';
 import { PathfindingManager } from '../systems/PathfindingManager';
 import { Renderer } from '../systems/Renderer';
 import { InputHandler } from '../systems/InputHandler';
@@ -100,6 +100,9 @@ export class Game {
     public showGuests: boolean = true;
     public showFoliage: boolean = true;
     public showBuildings: boolean = true;
+
+    // Debug toggles
+    public showInteractionPoints: boolean = false;
 
     // Staff ID counters
     private staffIdCounters: Record<string, number> = {
@@ -676,6 +679,20 @@ export class Game {
             const tiles = shelter.getOccupiedTiles();
             return tiles.some(tile => exhibit.containsTile(tile.x, tile.y));
         });
+    }
+
+    /**
+     * Get all food vendors (buildings that sell food)
+     */
+    getFoodVendors(): Vendor[] {
+        return this.buildings.filter((b): b is Vendor => b instanceof Vendor);
+    }
+
+    /**
+     * Get all placeables (shelters and buildings)
+     */
+    getAllPlaceables(): Placeable[] {
+        return [...this.shelters, ...this.buildings];
     }
 
     // =============================================

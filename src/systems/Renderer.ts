@@ -1573,9 +1573,12 @@ export class Renderer {
             });
         }
 
-        // Add guests (if visible)
+        // Add guests (if visible, skip those inside buildings)
         if (this.game.showGuests) {
             for (const guest of this.game.guests) {
+                // Skip guests who are inside buildings (browsing state only - exiting shows them walking out)
+                if (guest.state === 'browsing') continue;
+
                 const worldPos = guest.getWorldPos();
                 const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
                 items.push({
@@ -2887,6 +2890,22 @@ export class Renderer {
             this.drawBurgerStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
         } else if (config.style === 'drink_stand') {
             this.drawDrinkStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'vending_machine') {
+            this.drawVendingMachine(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'gift_shop') {
+            this.drawGiftShop(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'restaurant') {
+            this.drawRestaurant(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'bathroom') {
+            this.drawBathroom(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'bathroom_large') {
+            this.drawBathroomLarge(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'garbage_can') {
+            this.drawTrashCan(graphics, top, right, bottom, left, building.rotation);
+        } else if (config.style === 'bench') {
+            this.drawBench(graphics, top, right, bottom, left, building.rotation);
+        } else if (config.style === 'picnic_table') {
+            this.drawPicnicTable(graphics, top, right, bottom, left, building.rotation);
         } else {
             // Default building style
             this.drawGenericBuilding(graphics, top, right, bottom, left, buildingHeight);
@@ -3314,6 +3333,1196 @@ export class Renderer {
             ]);
             graphics.fill(0xffffff);
         }
+    }
+
+    /**
+     * Draw vending machine (1x1) - tall rectangular machine with display
+     */
+    private drawVendingMachine(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        const machineHeight = buildingHeight * 0.8;
+
+        // Colors
+        const bodyBlue = 0x2244aa;
+        const bodyBlueDark = 0x1a3388;
+        const displayGray = 0x333333;
+        const accentRed = 0xcc2222;
+
+        const displayWall = rotation % 4;
+        const displayTop = machineHeight * 0.75;
+        const displayBottom = machineHeight * 0.3;
+
+        // For rotations 2 and 3, draw back walls first, then front walls on top
+        if (displayWall === 2) {
+            // Display faces back-left (north)
+            // First: back walls (behind)
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - machineHeight },
+                { x: top.x, y: top.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlueDark);
+
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - machineHeight },
+                { x: left.x, y: left.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlue);
+
+            // Display on back-left wall
+            const wallDx = top.x - left.x;
+            const wallDy = top.y - left.y;
+            graphics.poly([
+                { x: left.x + wallDx * 0.15, y: left.y + wallDy * 0.15 - displayBottom },
+                { x: left.x + wallDx * 0.85, y: left.y + wallDy * 0.85 - displayBottom },
+                { x: left.x + wallDx * 0.85, y: left.y + wallDy * 0.85 - displayTop },
+                { x: left.x + wallDx * 0.15, y: left.y + wallDy * 0.15 - displayTop },
+            ]);
+            graphics.fill(displayGray);
+            graphics.stroke({ color: 0x66aaff, width: 1 });
+
+            // Coin slot
+            graphics.poly([
+                { x: left.x + wallDx * 0.6, y: left.y + wallDy * 0.6 - machineHeight * 0.15 },
+                { x: left.x + wallDx * 0.75, y: left.y + wallDy * 0.75 - machineHeight * 0.15 },
+                { x: left.x + wallDx * 0.75, y: left.y + wallDy * 0.75 - machineHeight * 0.25 },
+                { x: left.x + wallDx * 0.6, y: left.y + wallDy * 0.6 - machineHeight * 0.25 },
+            ]);
+            graphics.fill(0x444444);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - machineHeight },
+                { x: bottom.x, y: bottom.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - machineHeight },
+                { x: right.x, y: right.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlue);
+        } else if (displayWall === 3) {
+            // Display faces back-right (east)
+            // First: back walls (behind)
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - machineHeight },
+                { x: left.x, y: left.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlueDark);
+
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - machineHeight },
+                { x: top.x, y: top.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlue);
+
+            // Display on back-right wall
+            const wallDx = right.x - top.x;
+            const wallDy = right.y - top.y;
+            graphics.poly([
+                { x: top.x + wallDx * 0.15, y: top.y + wallDy * 0.15 - displayBottom },
+                { x: top.x + wallDx * 0.85, y: top.y + wallDy * 0.85 - displayBottom },
+                { x: top.x + wallDx * 0.85, y: top.y + wallDy * 0.85 - displayTop },
+                { x: top.x + wallDx * 0.15, y: top.y + wallDy * 0.15 - displayTop },
+            ]);
+            graphics.fill(displayGray);
+            graphics.stroke({ color: 0x66aaff, width: 1 });
+
+            // Coin slot
+            graphics.poly([
+                { x: top.x + wallDx * 0.6, y: top.y + wallDy * 0.6 - machineHeight * 0.15 },
+                { x: top.x + wallDx * 0.75, y: top.y + wallDy * 0.75 - machineHeight * 0.15 },
+                { x: top.x + wallDx * 0.75, y: top.y + wallDy * 0.75 - machineHeight * 0.25 },
+                { x: top.x + wallDx * 0.6, y: top.y + wallDy * 0.6 - machineHeight * 0.25 },
+            ]);
+            graphics.fill(0x444444);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - machineHeight },
+                { x: bottom.x, y: bottom.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - machineHeight },
+                { x: right.x, y: right.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlue);
+        } else {
+            // Rotations 0 and 1 - normal front wall display
+            // Front-left wall (darker)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - machineHeight },
+                { x: bottom.x, y: bottom.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlueDark);
+
+            // Front-right wall (brighter)
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - machineHeight },
+                { x: right.x, y: right.y - machineHeight },
+            ]);
+            graphics.fill(bodyBlue);
+
+            if (displayWall === 0) {
+                // Front-right wall (south)
+                const wallDx = bottom.x - right.x;
+                const wallDy = bottom.y - right.y;
+
+                graphics.poly([
+                    { x: right.x + wallDx * 0.15, y: right.y + wallDy * 0.15 - displayBottom },
+                    { x: right.x + wallDx * 0.85, y: right.y + wallDy * 0.85 - displayBottom },
+                    { x: right.x + wallDx * 0.85, y: right.y + wallDy * 0.85 - displayTop },
+                    { x: right.x + wallDx * 0.15, y: right.y + wallDy * 0.15 - displayTop },
+                ]);
+                graphics.fill(displayGray);
+                graphics.stroke({ color: 0x66aaff, width: 1 });
+
+                // Coin slot
+                graphics.poly([
+                    { x: right.x + wallDx * 0.6, y: right.y + wallDy * 0.6 - machineHeight * 0.15 },
+                    { x: right.x + wallDx * 0.75, y: right.y + wallDy * 0.75 - machineHeight * 0.15 },
+                    { x: right.x + wallDx * 0.75, y: right.y + wallDy * 0.75 - machineHeight * 0.25 },
+                    { x: right.x + wallDx * 0.6, y: right.y + wallDy * 0.6 - machineHeight * 0.25 },
+                ]);
+                graphics.fill(0x444444);
+            } else {
+                // Front-left wall (west)
+                const wallDx = left.x - bottom.x;
+                const wallDy = left.y - bottom.y;
+
+                graphics.poly([
+                    { x: bottom.x + wallDx * 0.15, y: bottom.y + wallDy * 0.15 - displayBottom },
+                    { x: bottom.x + wallDx * 0.85, y: bottom.y + wallDy * 0.85 - displayBottom },
+                    { x: bottom.x + wallDx * 0.85, y: bottom.y + wallDy * 0.85 - displayTop },
+                    { x: bottom.x + wallDx * 0.15, y: bottom.y + wallDy * 0.15 - displayTop },
+                ]);
+                graphics.fill(displayGray);
+                graphics.stroke({ color: 0x66aaff, width: 1 });
+
+                // Coin slot
+                graphics.poly([
+                    { x: bottom.x + wallDx * 0.6, y: bottom.y + wallDy * 0.6 - machineHeight * 0.15 },
+                    { x: bottom.x + wallDx * 0.75, y: bottom.y + wallDy * 0.75 - machineHeight * 0.15 },
+                    { x: bottom.x + wallDx * 0.75, y: bottom.y + wallDy * 0.75 - machineHeight * 0.25 },
+                    { x: bottom.x + wallDx * 0.6, y: bottom.y + wallDy * 0.6 - machineHeight * 0.25 },
+                ]);
+                graphics.fill(0x444444);
+            }
+        }
+
+        // Top of machine
+        graphics.poly([
+            { x: top.x, y: top.y - machineHeight },
+            { x: right.x, y: right.y - machineHeight },
+            { x: bottom.x, y: bottom.y - machineHeight },
+            { x: left.x, y: left.y - machineHeight },
+        ]);
+        graphics.fill(bodyBlueDark);
+
+        // Red accent stripe on top
+        graphics.poly([
+            { x: top.x, y: top.y - machineHeight - 3 },
+            { x: right.x, y: right.y - machineHeight - 3 },
+            { x: bottom.x, y: bottom.y - machineHeight - 3 },
+            { x: left.x, y: left.y - machineHeight - 3 },
+        ]);
+        graphics.fill(accentRed);
+    }
+
+    /**
+     * Draw gift shop (3x3) - colorful building with large windows and gift box on top
+     */
+    private drawGiftShop(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        // Colors - bright pink/purple theme
+        const wallPink = 0xdd66aa;
+        const wallPinkDark = 0xbb4488;
+        const roofPurple = 0x8844aa;
+        const windowYellow = 0xffee88;
+        const doorBrown = 0x8b4513;
+
+        const entranceWall = rotation % 4;
+
+        // Helper to draw windows on a wall
+        const drawWindows = (startX: number, startY: number, dx: number, dy: number) => {
+            // Window 1
+            graphics.poly([
+                { x: startX + dx * 0.1, y: startY + dy * 0.1 - buildingHeight * 0.2 },
+                { x: startX + dx * 0.4, y: startY + dy * 0.4 - buildingHeight * 0.2 },
+                { x: startX + dx * 0.4, y: startY + dy * 0.4 - buildingHeight * 0.7 },
+                { x: startX + dx * 0.1, y: startY + dy * 0.1 - buildingHeight * 0.7 },
+            ]);
+            graphics.fill(windowYellow);
+            graphics.stroke({ color: 0xffffff, width: 2 });
+
+            // Window 2
+            graphics.poly([
+                { x: startX + dx * 0.5, y: startY + dy * 0.5 - buildingHeight * 0.2 },
+                { x: startX + dx * 0.8, y: startY + dy * 0.8 - buildingHeight * 0.2 },
+                { x: startX + dx * 0.8, y: startY + dy * 0.8 - buildingHeight * 0.7 },
+                { x: startX + dx * 0.5, y: startY + dy * 0.5 - buildingHeight * 0.7 },
+            ]);
+            graphics.fill(windowYellow);
+            graphics.stroke({ color: 0xffffff, width: 2 });
+        };
+
+        // Helper to draw door on a wall
+        const drawDoor = (startX: number, startY: number, dx: number, dy: number) => {
+            graphics.poly([
+                { x: startX + dx * 0.3, y: startY + dy * 0.3 },
+                { x: startX + dx * 0.6, y: startY + dy * 0.6 },
+                { x: startX + dx * 0.6, y: startY + dy * 0.6 - buildingHeight * 0.6 },
+                { x: startX + dx * 0.3, y: startY + dy * 0.3 - buildingHeight * 0.6 },
+            ]);
+            graphics.fill(doorBrown);
+            graphics.stroke({ color: 0x5a3510, width: 2 });
+        };
+
+        // Door positions must match interaction point transforms (shifted 90 CCW):
+        // rotation 0: interaction at (2,1) = right edge (x=2) = front-right wall
+        // rotation 1: interaction at (1,2) = front edge (y=2) = front-left wall
+        // rotation 2: interaction at (0,1) = left edge (x=0) = back-left wall
+        // rotation 3: interaction at (1,0) = back edge (y=0) = back-right wall
+
+        if (entranceWall === 2) {
+            // Door on left edge (back-left wall) - draw back walls first
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - buildingHeight },
+                { x: top.x, y: top.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+            drawWindows(top.x, top.y, right.x - top.x, right.y - top.y);
+
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - buildingHeight },
+                { x: left.x, y: left.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+            drawDoor(left.x, left.y, top.x - left.x, top.y - left.y);
+
+            // Front walls on top
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+        } else if (entranceWall === 3) {
+            // Door on back edge (back-right wall) - draw back walls first
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - buildingHeight },
+                { x: left.x, y: left.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+            drawWindows(left.x, left.y, top.x - left.x, top.y - left.y);
+
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - buildingHeight },
+                { x: top.x, y: top.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+            drawDoor(top.x, top.y, right.x - top.x, right.y - top.y);
+
+            // Front walls on top
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+        } else if (entranceWall === 1) {
+            // Door on front edge (front-left wall) - normal front view
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+            drawDoor(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+            drawWindows(right.x, right.y, bottom.x - right.x, bottom.y - right.y);
+        } else {
+            // entranceWall === 0: Door on right edge (front-right wall)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallPinkDark);
+            drawWindows(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallPink);
+            drawDoor(right.x, right.y, bottom.x - right.x, bottom.y - right.y);
+        }
+
+        // Roof
+        graphics.poly([
+            { x: top.x, y: top.y - buildingHeight },
+            { x: right.x, y: right.y - buildingHeight },
+            { x: bottom.x, y: bottom.y - buildingHeight },
+            { x: left.x, y: left.y - buildingHeight },
+        ]);
+        graphics.fill(roofPurple);
+
+        // Gift box on roof
+        const boxSize = 12;
+        const centerX = (top.x + bottom.x) / 2;
+        const centerY = (top.y + bottom.y) / 2 - buildingHeight;
+
+        // Box body
+        graphics.rect(centerX - boxSize / 2, centerY - boxSize - 4, boxSize, boxSize);
+        graphics.fill(0xff4488);
+        graphics.stroke({ color: 0xffdd00, width: 3 });
+
+        // Bow on top
+        graphics.circle(centerX, centerY - boxSize - 8, 4);
+        graphics.fill(0xffdd00);
+    }
+
+    /**
+     * Draw restaurant (3x2) - large dining establishment with windows and entrance
+     * Door is on the right tile of the 2-tile side
+     */
+    private drawRestaurant(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        // Colors - warm restaurant theme
+        const wallBrown = 0x8b4513;
+        const wallBrownDark = 0x6b3410;
+        const roofRed = 0xaa3333;
+        const windowYellow = 0xffee99;
+        const doorBrown = 0x4a2810;
+        const awningRed = 0xcc4444;
+        const awningRedDark = 0x993333;
+
+        const entranceWall = rotation % 4;
+
+        // Helper to draw window
+        const drawWindow = (startX: number, startY: number, dx: number, dy: number, pos: number, width: number = 0.2) => {
+            graphics.poly([
+                { x: startX + dx * pos, y: startY + dy * pos - buildingHeight * 0.25 },
+                { x: startX + dx * (pos + width), y: startY + dy * (pos + width) - buildingHeight * 0.25 },
+                { x: startX + dx * (pos + width), y: startY + dy * (pos + width) - buildingHeight * 0.7 },
+                { x: startX + dx * pos, y: startY + dy * pos - buildingHeight * 0.7 },
+            ]);
+            graphics.fill(windowYellow);
+            graphics.stroke({ color: 0x654321, width: 2 });
+        };
+
+        // Helper to draw door with awning on specific position (0-1 range)
+        const drawDoor = (startX: number, startY: number, dx: number, dy: number, doorStart: number, awningColor: number) => {
+            const doorEnd = doorStart + 0.25;
+
+            // Door
+            graphics.poly([
+                { x: startX + dx * doorStart, y: startY + dy * doorStart },
+                { x: startX + dx * doorEnd, y: startY + dy * doorEnd },
+                { x: startX + dx * doorEnd, y: startY + dy * doorEnd - buildingHeight * 0.65 },
+                { x: startX + dx * doorStart, y: startY + dy * doorStart - buildingHeight * 0.65 },
+            ]);
+            graphics.fill(doorBrown);
+            graphics.stroke({ color: 0x3a1800, width: 2 });
+
+            // Door window
+            graphics.poly([
+                { x: startX + dx * (doorStart + 0.03), y: startY + dy * (doorStart + 0.03) - buildingHeight * 0.35 },
+                { x: startX + dx * (doorEnd - 0.03), y: startY + dy * (doorEnd - 0.03) - buildingHeight * 0.35 },
+                { x: startX + dx * (doorEnd - 0.03), y: startY + dy * (doorEnd - 0.03) - buildingHeight * 0.55 },
+                { x: startX + dx * (doorStart + 0.03), y: startY + dy * (doorStart + 0.03) - buildingHeight * 0.55 },
+            ]);
+            graphics.fill(windowYellow);
+
+            // Awning over entrance
+            const awningExtend = 6;
+            graphics.poly([
+                { x: startX + dx * (doorStart - 0.05), y: startY + dy * (doorStart - 0.05) - buildingHeight * 0.7 },
+                { x: startX + dx * (doorEnd + 0.05), y: startY + dy * (doorEnd + 0.05) - buildingHeight * 0.7 },
+                { x: startX + dx * (doorEnd + 0.05) + awningExtend, y: startY + dy * (doorEnd + 0.05) + awningExtend / 2 - buildingHeight * 0.7 + 4 },
+                { x: startX + dx * (doorStart - 0.05) + awningExtend, y: startY + dy * (doorStart - 0.05) + awningExtend / 2 - buildingHeight * 0.7 + 4 },
+            ]);
+            graphics.fill(awningColor);
+        };
+
+        // Helper to draw facade on a 2-tile wall (door on right half = higher position)
+        const drawFacade2Tile = (startX: number, startY: number, dx: number, dy: number, awningColor: number) => {
+            // Window on left half
+            drawWindow(startX, startY, dx, dy, 0.1, 0.3);
+            // Door on right half (position 0.55 to 0.8)
+            drawDoor(startX, startY, dx, dy, 0.55, awningColor);
+        };
+
+        // Helper to draw facade on a 3-tile wall (windows with no door)
+        const drawFacade3Tile = (startX: number, startY: number, dx: number, dy: number) => {
+            drawWindow(startX, startY, dx, dy, 0.08, 0.18);
+            drawWindow(startX, startY, dx, dy, 0.41, 0.18);
+            drawWindow(startX, startY, dx, dy, 0.74, 0.18);
+        };
+
+        if (entranceWall === 2) {
+            // Entrance on back-left (north) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            // Back-right wall (3-tile, no door)
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - buildingHeight },
+                { x: top.x, y: top.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrownDark);
+            drawFacade3Tile(top.x, top.y, right.x - top.x, right.y - top.y);
+
+            // Back-left wall (2-tile, with door)
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - buildingHeight },
+                { x: left.x, y: left.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrown);
+            drawFacade2Tile(left.x, left.y, top.x - left.x, top.y - left.y, awningRed);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrownDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrown);
+        } else if (entranceWall === 3) {
+            // Entrance on back-right (east) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            // Back-left wall (3-tile, no door)
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - buildingHeight },
+                { x: left.x, y: left.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrownDark);
+            drawFacade3Tile(left.x, left.y, top.x - left.x, top.y - left.y);
+
+            // Back-right wall (2-tile, with door)
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - buildingHeight },
+                { x: top.x, y: top.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrown);
+            drawFacade2Tile(top.x, top.y, right.x - top.x, right.y - top.y, awningRed);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrownDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrown);
+        } else {
+            // Front-left wall (darker, 3-tile at rot 0, 2-tile at rot 1)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - buildingHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrownDark);
+
+            // Front-right wall (brighter)
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - buildingHeight },
+                { x: right.x, y: right.y - buildingHeight },
+            ]);
+            graphics.fill(wallBrown);
+
+            if (entranceWall === 0) {
+                // Facade on front-right wall (2-tile, with door)
+                drawFacade2Tile(right.x, right.y, bottom.x - right.x, bottom.y - right.y, awningRed);
+                // Windows on front-left wall (3-tile)
+                drawFacade3Tile(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y);
+            } else {
+                // Facade on front-left wall (2-tile, with door)
+                drawFacade2Tile(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y, awningRedDark);
+                // Windows on front-right wall (3-tile)
+                drawFacade3Tile(right.x, right.y, bottom.x - right.x, bottom.y - right.y);
+            }
+        }
+
+        // Roof
+        graphics.poly([
+            { x: top.x, y: top.y - buildingHeight },
+            { x: right.x, y: right.y - buildingHeight },
+            { x: bottom.x, y: bottom.y - buildingHeight },
+            { x: left.x, y: left.y - buildingHeight },
+        ]);
+        graphics.fill(roofRed);
+
+        // Restaurant sign on roof
+        const signX = (top.x + bottom.x) / 2;
+        const signY = top.y - buildingHeight - 6;
+
+        // Sign background
+        graphics.roundRect(signX - 15, signY - 8, 30, 14, 2);
+        graphics.fill(0xffffff);
+        graphics.stroke({ color: 0x8b4513, width: 2 });
+
+        // Fork and knife icons (simplified)
+        graphics.moveTo(signX - 8, signY - 5);
+        graphics.lineTo(signX - 8, signY + 3);
+        graphics.stroke({ color: 0x666666, width: 2 });
+
+        graphics.moveTo(signX + 8, signY - 5);
+        graphics.lineTo(signX + 8, signY + 3);
+        graphics.stroke({ color: 0x666666, width: 2 });
+
+        // Plate circle
+        graphics.circle(signX, signY - 1, 5);
+        graphics.stroke({ color: 0x666666, width: 1.5 });
+    }
+
+    /**
+     * Draw bathroom (1x1) - small building with restroom sign
+     */
+    private drawBathroom(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        const height = buildingHeight * 0.7;
+
+        // Colors - clean blue/white theme
+        const wallBlue = 0x4488cc;
+        const wallBlueDark = 0x336699;
+        const roofWhite = 0xeeeeee;
+        const doorColor = 0x224466;
+
+        const doorWall = rotation % 4;
+
+        // Helper to draw door on a wall
+        const drawDoor = (startX: number, startY: number, dx: number, dy: number) => {
+            graphics.poly([
+                { x: startX + dx * 0.2, y: startY + dy * 0.2 },
+                { x: startX + dx * 0.8, y: startY + dy * 0.8 },
+                { x: startX + dx * 0.8, y: startY + dy * 0.8 - height * 0.75 },
+                { x: startX + dx * 0.2, y: startY + dy * 0.2 - height * 0.75 },
+            ]);
+            graphics.fill(doorColor);
+            graphics.stroke({ color: 0x66aacc, width: 1 });
+        };
+
+        if (doorWall === 2) {
+            // Door on back-left (north) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - height },
+                { x: top.x, y: top.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - height },
+                { x: left.x, y: left.y - height },
+            ]);
+            graphics.fill(wallBlue);
+            drawDoor(left.x, left.y, top.x - left.x, top.y - left.y);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+        } else if (doorWall === 3) {
+            // Door on back-right (east) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - height },
+                { x: left.x, y: left.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - height },
+                { x: top.x, y: top.y - height },
+            ]);
+            graphics.fill(wallBlue);
+            drawDoor(top.x, top.y, right.x - top.x, right.y - top.y);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+        } else {
+            // Front-left wall (darker)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            // Front-right wall (brighter)
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+
+            if (doorWall === 0) {
+                // Door on front-right
+                drawDoor(right.x, right.y, bottom.x - right.x, bottom.y - right.y);
+            } else {
+                // Door on front-left
+                drawDoor(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y);
+            }
+        }
+
+        // Roof
+        graphics.poly([
+            { x: top.x, y: top.y - height },
+            { x: right.x, y: right.y - height },
+            { x: bottom.x, y: bottom.y - height },
+            { x: left.x, y: left.y - height },
+        ]);
+        graphics.fill(roofWhite);
+
+        // Restroom sign (simple person icon)
+        const signX = (top.x + bottom.x) / 2;
+        const signY = (right.y + left.y) / 2 - height * 0.5;
+
+        // Sign background
+        graphics.circle(signX, signY, 6);
+        graphics.fill(0xffffff);
+        graphics.stroke({ color: 0x4488cc, width: 1 });
+
+        // Person silhouette (simple)
+        graphics.circle(signX, signY - 2, 2);
+        graphics.fill(0x4488cc);
+        graphics.rect(signX - 2, signY, 4, 4);
+        graphics.fill(0x4488cc);
+    }
+
+    /**
+     * Draw large bathroom (1x2) - bigger building with more details
+     */
+    private drawBathroomLarge(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        const height = buildingHeight * 0.8;
+
+        // Colors - clean blue/white theme
+        const wallBlue = 0x4488cc;
+        const wallBlueDark = 0x336699;
+        const roofWhite = 0xeeeeee;
+        const doorColor = 0x224466;
+
+        const doorWall = rotation % 4;
+
+        // Helper to draw two doors on a wall
+        const drawDoors = (startX: number, startY: number, dx: number, dy: number) => {
+            // Door 1 (men's - blue accent)
+            graphics.poly([
+                { x: startX + dx * 0.1, y: startY + dy * 0.1 },
+                { x: startX + dx * 0.4, y: startY + dy * 0.4 },
+                { x: startX + dx * 0.4, y: startY + dy * 0.4 - height * 0.7 },
+                { x: startX + dx * 0.1, y: startY + dy * 0.1 - height * 0.7 },
+            ]);
+            graphics.fill(doorColor);
+            graphics.stroke({ color: 0x66aacc, width: 1 });
+
+            // Door 2 (women's - pink accent)
+            graphics.poly([
+                { x: startX + dx * 0.55, y: startY + dy * 0.55 },
+                { x: startX + dx * 0.85, y: startY + dy * 0.85 },
+                { x: startX + dx * 0.85, y: startY + dy * 0.85 - height * 0.7 },
+                { x: startX + dx * 0.55, y: startY + dy * 0.55 - height * 0.7 },
+            ]);
+            graphics.fill(doorColor);
+            graphics.stroke({ color: 0xcc6688, width: 1 });
+        };
+
+        if (doorWall === 2) {
+            // Doors on back-left (north) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - height },
+                { x: top.x, y: top.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - height },
+                { x: left.x, y: left.y - height },
+            ]);
+            graphics.fill(wallBlue);
+            drawDoors(left.x, left.y, top.x - left.x, top.y - left.y);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+        } else if (doorWall === 3) {
+            // Doors on back-right (east) - draw back walls first, then front walls on top
+            // First: back walls (behind)
+            graphics.poly([
+                { x: left.x, y: left.y },
+                { x: top.x, y: top.y },
+                { x: top.x, y: top.y - height },
+                { x: left.x, y: left.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: top.x, y: top.y },
+                { x: right.x, y: right.y },
+                { x: right.x, y: right.y - height },
+                { x: top.x, y: top.y - height },
+            ]);
+            graphics.fill(wallBlue);
+            drawDoors(top.x, top.y, right.x - top.x, right.y - top.y);
+
+            // Then: front walls (in front)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+        } else {
+            // Front-left wall (darker)
+            graphics.poly([
+                { x: bottom.x, y: bottom.y },
+                { x: left.x, y: left.y },
+                { x: left.x, y: left.y - height },
+                { x: bottom.x, y: bottom.y - height },
+            ]);
+            graphics.fill(wallBlueDark);
+
+            // Front-right wall (brighter)
+            graphics.poly([
+                { x: right.x, y: right.y },
+                { x: bottom.x, y: bottom.y },
+                { x: bottom.x, y: bottom.y - height },
+                { x: right.x, y: right.y - height },
+            ]);
+            graphics.fill(wallBlue);
+
+            if (doorWall === 0) {
+                // Doors on front-right
+                drawDoors(right.x, right.y, bottom.x - right.x, bottom.y - right.y);
+            } else {
+                // Doors on front-left
+                drawDoors(bottom.x, bottom.y, left.x - bottom.x, left.y - bottom.y);
+            }
+        }
+
+        // Roof
+        graphics.poly([
+            { x: top.x, y: top.y - height },
+            { x: right.x, y: right.y - height },
+            { x: bottom.x, y: bottom.y - height },
+            { x: left.x, y: left.y - height },
+        ]);
+        graphics.fill(roofWhite);
+
+        // Large restroom sign on roof
+        const signX = (top.x + bottom.x) / 2;
+        const signY = top.y - height - 8;
+
+        graphics.roundRect(signX - 10, signY - 6, 20, 12, 2);
+        graphics.fill(0xffffff);
+        graphics.stroke({ color: 0x4488cc, width: 2 });
+
+        // WC text simulation with simple shapes
+        graphics.rect(signX - 6, signY - 2, 3, 4);
+        graphics.fill(0x4488cc);
+        graphics.rect(signX + 2, signY - 2, 3, 4);
+        graphics.fill(0x4488cc);
+    }
+
+    /**
+     * Draw trash can (1x1) - small cylindrical can
+     */
+    private drawTrashCan(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        rotation: number = 0
+    ): void {
+        const canHeight = 18;
+        const centerX = (top.x + bottom.x) / 2;
+        const centerY = (top.y + bottom.y) / 2;
+
+        // Colors
+        const canGreen = 0x228833;
+        const canGreenDark = 0x1a6628;
+        const lidGray = 0x555555;
+
+        // Can body (hexagonal to simulate cylinder in isometric)
+        const rx = 10;
+        const ry = 6;
+
+        // Body
+        graphics.poly([
+            { x: centerX - rx, y: centerY },
+            { x: centerX - rx * 0.5, y: centerY + ry },
+            { x: centerX + rx * 0.5, y: centerY + ry },
+            { x: centerX + rx, y: centerY },
+            { x: centerX + rx, y: centerY - canHeight },
+            { x: centerX + rx * 0.5, y: centerY - canHeight + ry * 0.5 },
+            { x: centerX - rx * 0.5, y: centerY - canHeight + ry * 0.5 },
+            { x: centerX - rx, y: centerY - canHeight },
+        ]);
+        graphics.fill(canGreen);
+
+        // Darker side
+        graphics.poly([
+            { x: centerX, y: centerY + ry * 0.7 },
+            { x: centerX + rx * 0.5, y: centerY + ry },
+            { x: centerX + rx, y: centerY },
+            { x: centerX + rx, y: centerY - canHeight },
+            { x: centerX, y: centerY - canHeight + ry * 0.3 },
+        ]);
+        graphics.fill(canGreenDark);
+
+        // Lid (ellipse top)
+        graphics.ellipse(centerX, centerY - canHeight, rx, ry * 0.7);
+        graphics.fill(lidGray);
+
+        // Recycling symbol hint (three small marks)
+        graphics.moveTo(centerX - 3, centerY - canHeight * 0.5);
+        graphics.lineTo(centerX, centerY - canHeight * 0.4);
+        graphics.lineTo(centerX + 3, centerY - canHeight * 0.5);
+        graphics.stroke({ color: 0xaaffaa, width: 2 });
+    }
+
+    /**
+     * Draw bench (1x1) - simple wooden bench
+     */
+    private drawBench(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        rotation: number = 0
+    ): void {
+        const benchHeight = 10;
+        const legHeight = 8;
+        const centerX = (top.x + bottom.x) / 2;
+        const centerY = (top.y + bottom.y) / 2;
+
+        // Colors
+        const woodBrown = 0x8b5a2b;
+        const woodBrownDark = 0x6b4423;
+        const legGray = 0x444444;
+
+        // Bench seat (rectangular slab)
+        const seatWidth = 24;
+        const seatDepth = 10;
+
+        // Seat top
+        graphics.poly([
+            { x: centerX, y: centerY - seatDepth / 2 - benchHeight },
+            { x: centerX + seatWidth / 2, y: centerY - benchHeight },
+            { x: centerX, y: centerY + seatDepth / 2 - benchHeight },
+            { x: centerX - seatWidth / 2, y: centerY - benchHeight },
+        ]);
+        graphics.fill(woodBrown);
+
+        // Seat front edge
+        graphics.poly([
+            { x: centerX + seatWidth / 2, y: centerY - benchHeight },
+            { x: centerX, y: centerY + seatDepth / 2 - benchHeight },
+            { x: centerX, y: centerY + seatDepth / 2 - benchHeight + 3 },
+            { x: centerX + seatWidth / 2, y: centerY - benchHeight + 3 },
+        ]);
+        graphics.fill(woodBrownDark);
+
+        // Seat side edge
+        graphics.poly([
+            { x: centerX, y: centerY + seatDepth / 2 - benchHeight },
+            { x: centerX - seatWidth / 2, y: centerY - benchHeight },
+            { x: centerX - seatWidth / 2, y: centerY - benchHeight + 3 },
+            { x: centerX, y: centerY + seatDepth / 2 - benchHeight + 3 },
+        ]);
+        graphics.fill(woodBrownDark);
+
+        // Legs (4 small rectangles)
+        const legPositions = [
+            { x: centerX - seatWidth / 3, y: centerY - seatDepth / 3 },
+            { x: centerX + seatWidth / 3, y: centerY - seatDepth / 3 },
+            { x: centerX - seatWidth / 3, y: centerY + seatDepth / 3 },
+            { x: centerX + seatWidth / 3, y: centerY + seatDepth / 3 },
+        ];
+
+        for (const leg of legPositions) {
+            graphics.rect(leg.x - 2, leg.y - benchHeight + 3, 4, legHeight);
+            graphics.fill(legGray);
+        }
+
+        // Backrest
+        graphics.poly([
+            { x: centerX - seatWidth / 2 + 2, y: centerY - 3 - benchHeight - 8 },
+            { x: centerX, y: centerY - seatDepth / 2 + 2 - benchHeight - 8 },
+            { x: centerX, y: centerY - seatDepth / 2 + 2 - benchHeight - 4 },
+            { x: centerX - seatWidth / 2 + 2, y: centerY - 3 - benchHeight - 4 },
+        ]);
+        graphics.fill(woodBrown);
+    }
+
+    /**
+     * Draw picnic table (1x1) - table with attached benches
+     */
+    private drawPicnicTable(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        rotation: number = 0
+    ): void {
+        const tableHeight = 12;
+        const centerX = (top.x + bottom.x) / 2;
+        const centerY = (top.y + bottom.y) / 2;
+
+        // Colors
+        const woodBrown = 0x8b5a2b;
+        const woodBrownDark = 0x6b4423;
+        const legGray = 0x555555;
+
+        // Table dimensions
+        const tableWidth = 26;
+        const tableDepth = 14;
+
+        // Bench 1 (front-left)
+        const bench1Y = centerY + tableDepth / 2 + 3;
+        graphics.poly([
+            { x: centerX - tableWidth / 3, y: bench1Y - 5 },
+            { x: centerX + tableWidth / 3, y: bench1Y - 5 },
+            { x: centerX + tableWidth / 3, y: bench1Y - 8 },
+            { x: centerX - tableWidth / 3, y: bench1Y - 8 },
+        ]);
+        graphics.fill(woodBrown);
+
+        // Bench 2 (back-right)
+        const bench2Y = centerY - tableDepth / 2 - 3;
+        graphics.poly([
+            { x: centerX - tableWidth / 3, y: bench2Y - 5 },
+            { x: centerX + tableWidth / 3, y: bench2Y - 5 },
+            { x: centerX + tableWidth / 3, y: bench2Y - 8 },
+            { x: centerX - tableWidth / 3, y: bench2Y - 8 },
+        ]);
+        graphics.fill(woodBrownDark);
+
+        // Table top
+        graphics.poly([
+            { x: centerX, y: centerY - tableDepth / 2 - tableHeight },
+            { x: centerX + tableWidth / 2, y: centerY - tableHeight },
+            { x: centerX, y: centerY + tableDepth / 2 - tableHeight },
+            { x: centerX - tableWidth / 2, y: centerY - tableHeight },
+        ]);
+        graphics.fill(woodBrown);
+
+        // Table front edge
+        graphics.poly([
+            { x: centerX + tableWidth / 2, y: centerY - tableHeight },
+            { x: centerX, y: centerY + tableDepth / 2 - tableHeight },
+            { x: centerX, y: centerY + tableDepth / 2 - tableHeight + 3 },
+            { x: centerX + tableWidth / 2, y: centerY - tableHeight + 3 },
+        ]);
+        graphics.fill(woodBrownDark);
+
+        // Table side edge
+        graphics.poly([
+            { x: centerX, y: centerY + tableDepth / 2 - tableHeight },
+            { x: centerX - tableWidth / 2, y: centerY - tableHeight },
+            { x: centerX - tableWidth / 2, y: centerY - tableHeight + 3 },
+            { x: centerX, y: centerY + tableDepth / 2 - tableHeight + 3 },
+        ]);
+        graphics.fill(woodBrownDark);
+
+        // Center support leg
+        graphics.poly([
+            { x: centerX - 3, y: centerY },
+            { x: centerX + 3, y: centerY },
+            { x: centerX + 3, y: centerY - tableHeight + 3 },
+            { x: centerX - 3, y: centerY - tableHeight + 3 },
+        ]);
+        graphics.fill(legGray);
     }
 
     /**
@@ -3960,6 +5169,22 @@ export class Renderer {
             this.drawBurgerStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
         } else if (buildingType === 'drink_stand') {
             this.drawDrinkStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'vending_machine') {
+            this.drawVendingMachine(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'gift_shop') {
+            this.drawGiftShop(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'restaurant') {
+            this.drawRestaurant(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'bathroom') {
+            this.drawBathroom(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'bathroom_large') {
+            this.drawBathroomLarge(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'garbage_can') {
+            this.drawTrashCan(this.overlayGraphics, top, right, bottom, left, rotation);
+        } else if (buildingType === 'bench') {
+            this.drawBench(this.overlayGraphics, top, right, bottom, left, rotation);
+        } else if (buildingType === 'picnic_table') {
+            this.drawPicnicTable(this.overlayGraphics, top, right, bottom, left, rotation);
         } else {
             // Generic building preview for other types
             this.drawGenericBuilding(this.overlayGraphics, top, right, bottom, left, buildingHeight);

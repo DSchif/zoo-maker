@@ -50,8 +50,18 @@ export class Guest extends Entity {
     public readonly type: EntityType = 'guest';
 
     // State
-    public state: 'entering' | 'wandering' | 'viewing' | 'seeking_need' | 'seeking_seat' | 'eating' | 'eating_walking' | 'leaving' | 'left' = 'entering';
+    public state: 'entering' | 'wandering' | 'viewing' | 'seeking_need' | 'seeking_seat' | 'eating' | 'eating_walking' | 'entering_building' | 'browsing' | 'exiting_building' | 'leaving' | 'left' = 'entering';
     protected stateTimer: number = 0;
+
+    // Browsing state
+    private browsingDuration: number = 0;  // How long to browse
+    private browsingPlaceable: Placeable | null = null;  // What we're browsing in
+
+    // Building entry/exit state (for walking into/out of buildings with 'enter' approach)
+    private entryTargetX: number = 0;  // The interaction tile (inside building)
+    private entryTargetY: number = 0;
+    private approachTileX: number = 0;  // The approach tile (outside building, in front of door)
+    private approachTileY: number = 0;
 
     // Appearance (random colors)
     public readonly shirtColor: number;
@@ -191,6 +201,9 @@ export class Guest extends Entity {
         this.thirst = Math.max(0, this.thirst - dt * Guest.THIRST_DECAY);
         this.energy = Math.max(0, this.energy - dt * Guest.ENERGY_DECAY);
 
+        // Shopping desire builds up over time
+        this.shoppingDesire = Math.min(100, this.shoppingDesire + dt * Guest.SHOPPING_DESIRE_RATE);
+
         // Check if should seek to satisfy needs (only when wandering)
         if (this.state === 'wandering') {
             this.checkNeeds();
@@ -248,8 +261,23 @@ export class Guest extends Entity {
                         // At the vendor - try to purchase based on current need
                         this.completePurchase();
                     } else if (this.targetPlaceable && this.isNearPlaceable(this.targetPlaceable)) {
-                        // At a non-vendor interaction point
-                        this.completeInteraction();
+                        // Check if this is an 'enter' approach type - need to walk into the building
+                        if (this.targetInteraction?.approach === 'enter') {
+                            // Store both the approach tile (where we are now) and the entry tile (inside)
+                            this.approachTileX = this.tileX;
+                            this.approachTileY = this.tileY;
+                            this.entryTargetX = this.targetInteraction.worldX;
+                            this.entryTargetY = this.targetInteraction.worldY;
+                            this.state = 'entering_building';
+                            this.stateTimer = 0;
+                            // Walk directly to the interaction tile (inside the building)
+                            this.targetTileX = this.entryTargetX;
+                            this.targetTileY = this.entryTargetY;
+                            this.isMoving = true;
+                        } else {
+                            // At a non-vendor interaction point
+                            this.completeInteraction();
+                        }
                     } else {
                         // Failed to reach target - mark need as failed
                         if (this.currentNeed) {
@@ -262,6 +290,23 @@ export class Guest extends Entity {
                 }
                 // Timeout: give up after 30 seconds
                 if (this.stateTimer > 30) {
+                    if (this.currentNeed) {
+                        this.needSeekingFailed.set(this.currentNeed, true);
+                    }
+                    this.clearSeekingState();
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
+                }
+                break;
+
+            case 'entering_building':
+                // Walking into a building (from approach tile to interaction tile)
+                if (!this.isMoving) {
+                    // Arrived inside the building - complete the interaction
+                    this.completeInteraction();
+                }
+                // Timeout: give up after 5 seconds
+                if (this.stateTimer > 5) {
                     if (this.currentNeed) {
                         this.needSeekingFailed.set(this.currentNeed, true);
                     }
@@ -327,6 +372,56 @@ export class Guest extends Entity {
                 // Continue wandering while eating
                 if (!this.isMoving && this.currentPath.length === 0) {
                     this.chooseNextDestination();
+                }
+                break;
+
+            case 'browsing':
+                // Browsing inside a shop (gift shop, etc.)
+                if (this.stateTimer >= this.browsingDuration) {
+                    // Done browsing - maybe make a purchase
+                    const purchaseChance = 0.6;  // 60% chance to buy something
+                    if (Math.random() < purchaseChance && this.browsingPlaceable) {
+                        // Made a purchase!
+                        const purchasePrice = this.browsingPlaceable.config.purchasePrice || 10;
+                        // Boost happiness from successful shopping
+                        this.happiness = Math.min(100, this.happiness + 15);
+                        // Satisfy shopping need
+                        // (shopping isn't a tracked stat, but we clear the failed flag)
+                    }
+                    // Either way, browsing satisfies the fun/shopping urge somewhat
+                    this.happiness = Math.min(100, this.happiness + 5);
+
+                    // Release the interaction reservation and update shop occupancy
+                    if (this.browsingPlaceable) {
+                        this.browsingPlaceable.releaseInteraction(this.id);
+                        // Call guestLeave() for Shop types
+                        if ('guestLeave' in this.browsingPlaceable && typeof (this.browsingPlaceable as any).guestLeave === 'function') {
+                            (this.browsingPlaceable as any).guestLeave();
+                        }
+                        this.browsingPlaceable = null;
+                    }
+
+                    // Exit through the door - walk back to approach tile
+                    this.state = 'exiting_building';
+                    this.stateTimer = 0;
+                    this.targetTileX = this.approachTileX;
+                    this.targetTileY = this.approachTileY;
+                    this.isMoving = true;
+                    this.needSeekingFailed.clear();
+                }
+                break;
+
+            case 'exiting_building':
+                // Walking out of a building (from interaction tile to approach tile)
+                if (!this.isMoving) {
+                    // Exited the building - back to wandering
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
+                }
+                // Timeout: give up after 5 seconds
+                if (this.stateTimer > 5) {
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
                 }
                 break;
 
@@ -535,11 +630,16 @@ export class Guest extends Entity {
     // Unified Needs-Based Seeking System
     // =========================================
 
+    // Shopping desire (builds up over time)
+    private shoppingDesire: number = 0;
+    private static readonly SHOPPING_DESIRE_RATE = 0.3;  // Per second, builds up over ~5 minutes
+    private static readonly SHOPPING_THRESHOLD = 80;     // When they'll actively seek a shop
+
     /**
      * Check all needs and start seeking if necessary
      */
     private checkNeeds(): void {
-        // Priority order: thirst > hunger > energy
+        // Priority order: thirst > hunger > energy > shopping
         // (Thirst is slightly more urgent as it decays faster)
 
         // Check thirst first
@@ -555,6 +655,16 @@ export class Guest extends Entity {
         // Check energy (seek benches/rest areas)
         if (this.energy < 40 && !this.needSeekingFailed.get('energy')) {
             if (this.trySeekNeed('energy')) return;
+        }
+
+        // Check shopping desire (only if happy enough and desire is high)
+        if (this.shoppingDesire >= Guest.SHOPPING_THRESHOLD &&
+            this.happiness >= 50 &&
+            !this.needSeekingFailed.get('shopping')) {
+            if (this.trySeekNeed('shopping')) {
+                this.shoppingDesire = 0;  // Reset desire after deciding to shop
+                return;
+            }
         }
     }
 
@@ -808,18 +918,77 @@ export class Guest extends Entity {
                 break;
 
             case 'enter':
-                // For enter-type interactions (bathroom, attractions)
-                // Satisfy the need directly
-                if (this.currentNeed === 'bathroom') {
+                // For enter-type interactions (bathroom, attractions, shops, restaurants)
+                // Check what needs this interaction satisfies
+                const satisfies = interaction.satisfies || [];
+
+                if (satisfies.includes('shopping')) {
+                    // Gift shop or similar - enter browsing state
+                    // Reserve the interaction point
+                    if ('index' in interaction && typeof interaction.index === 'number') {
+                        placeable.reserveInteraction(interaction.index, this.id, 'guest');
+                    }
+                    this.browsingPlaceable = placeable;
+                    // Browse for 25-35 seconds (30 seconds +/- 5)
+                    this.browsingDuration = 25 + Math.random() * 10;
+                    this.state = 'browsing';
+                    this.stateTimer = 0;
+                    this.needSeekingFailed.delete(this.currentNeed);
+                    // Track usage and occupancy for Shop/Building types
+                    if ('guestEnter' in placeable && typeof (placeable as any).guestEnter === 'function') {
+                        (placeable as any).guestEnter();
+                    }
+                    if ('recordUsage' in placeable && typeof (placeable as any).recordUsage === 'function') {
+                        (placeable as any).recordUsage();
+                    } else {
+                        placeable.guestsServed++;
+                    }
+                } else if (satisfies.includes('hunger') || satisfies.includes('thirst')) {
+                    // Restaurant or similar - enter eating state
+                    // Reserve the interaction point
+                    if ('index' in interaction && typeof interaction.index === 'number') {
+                        placeable.reserveInteraction(interaction.index, this.id, 'guest');
+                    }
+                    this.browsingPlaceable = placeable;  // Reuse for tracking where we are
+                    // Eating at a restaurant takes 15-25 seconds
+                    this.browsingDuration = 15 + Math.random() * 10;
+                    // Satisfy hunger and thirst
+                    if (satisfies.includes('hunger')) {
+                        this.hunger = Math.min(100, this.hunger + 50);
+                    }
+                    if (satisfies.includes('thirst')) {
+                        this.thirst = Math.min(100, this.thirst + 40);
+                    }
+                    this.happiness = Math.min(100, this.happiness + 10);
+                    this.state = 'browsing';  // Reuse browsing state for staying inside
+                    this.stateTimer = 0;
+                    this.needSeekingFailed.delete(this.currentNeed);
+                    // Track usage and occupancy for Shop/Building types
+                    if ('guestEnter' in placeable && typeof (placeable as any).guestEnter === 'function') {
+                        (placeable as any).guestEnter();
+                    }
+                    if ('recordUsage' in placeable && typeof (placeable as any).recordUsage === 'function') {
+                        (placeable as any).recordUsage();
+                    } else {
+                        placeable.guestsServed++;
+                    }
+                } else if (this.currentNeed === 'bathroom') {
                     // Bathroom doesn't have a stat, just make guest happy
                     this.happiness = Math.min(100, this.happiness + 10);
-                } else if (this.currentNeed === 'fun') {
+                    this.needSeekingFailed.delete(this.currentNeed);
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
+                } else if (this.currentNeed === 'fun' || satisfies.includes('fun')) {
                     // Attractions boost happiness
                     this.happiness = Math.min(100, this.happiness + 20);
+                    this.needSeekingFailed.delete(this.currentNeed);
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
+                } else {
+                    this.needSeekingFailed.delete(this.currentNeed);
+                    this.state = 'wandering';
+                    this.stateTimer = 0;
                 }
-                this.needSeekingFailed.delete(this.currentNeed);
-                this.state = 'wandering';
-                this.stateTimer = 0;
                 break;
 
             default:

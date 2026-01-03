@@ -120,17 +120,21 @@ export class PathfindingManager {
                 }
             }
 
-            // Collect blocked tiles from shelters
-            for (const shelter of this.game.shelters) {
-                for (const tile of shelter.getOccupiedTiles()) {
-                    blockedTiles.push({ x: tile.x, y: tile.y });
+            // Collect blocked tiles from all placeables (shelters, buildings)
+            // Exclude tiles that have interaction points (entrances)
+            for (const placeable of this.game.getAllPlaceables()) {
+                // Get all interaction point world positions
+                const interactionTiles = new Set<string>();
+                for (const interaction of placeable.getInteractionPoints()) {
+                    interactionTiles.add(`${interaction.worldX},${interaction.worldY}`);
                 }
-            }
 
-            // Collect blocked tiles from buildings
-            for (const building of this.game.buildings) {
-                for (const tile of building.getOccupiedTiles()) {
-                    blockedTiles.push({ x: tile.x, y: tile.y });
+                // Block all occupied tiles except interaction points
+                for (const tile of placeable.getOccupiedTiles()) {
+                    const tileKey = `${tile.x},${tile.y}`;
+                    if (!interactionTiles.has(tileKey)) {
+                        blockedTiles.push({ x: tile.x, y: tile.y });
+                    }
                 }
             }
         }

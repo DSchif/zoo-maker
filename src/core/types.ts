@@ -235,7 +235,7 @@ export interface PlaceableConfig {
 // Placeable types registry
 export type PlaceableType =
     | 'shelter_small' | 'shelter_regular' | 'shelter_large'
-    | 'bench' | 'picnic_table' | 'garbage_can' | 'bathroom'
+    | 'bench' | 'picnic_table' | 'garbage_can' | 'bathroom' | 'bathroom_large'
     | 'gift_shop' | 'restaurant'
     | 'burger_stand' | 'drink_stand' | 'vending_machine'
     | 'indoor_attraction';
@@ -292,31 +292,29 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
     bench: {
         name: 'Bench',
         icon: '🪑',
-        width: 2,
+        width: 1,
         depth: 1,
         category: 'amenity',
         cost: 75,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
-            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] }
-        ]
+            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 2, approach: 'any', satisfies: ['energy'] }
+        ],
+        style: 'bench'
     },
     picnic_table: {
         name: 'Picnic Table',
         icon: '🪵',
-        width: 2,
-        depth: 2,
+        width: 1,
+        depth: 1,
         category: 'amenity',
         cost: 150,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
-            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
-            { relativeX: 0, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1, approach: 'any', satisfies: ['energy'] },
-            { relativeX: 1, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1, approach: 'any', satisfies: ['energy'] }
-        ]
+            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 4, approach: 'any', satisfies: ['energy'] }
+        ],
+        style: 'picnic_table'
     },
     garbage_can: {
-        name: 'Garbage Can',
+        name: 'Trash Can',
         icon: '🗑️',
         width: 1,
         depth: 1,
@@ -324,45 +322,62 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 50,
         interactions: [
             { relativeX: 0, relativeY: 0, type: 'use', entities: ['guest'], facing: 'north', approach: 'any' }
-        ]
+        ],
+        style: 'garbage_can'
     },
     bathroom: {
         name: 'Bathroom',
         icon: '🚻',
-        width: 2,
+        width: 1,
+        depth: 1,
+        category: 'amenity',
+        cost: 1500,
+        interactions: [
+            { relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south', capacity: 2, approach: 'facing', satisfies: ['bathroom'] }
+        ],
+        style: 'bathroom'
+    },
+    bathroom_large: {
+        name: 'Large Bathroom',
+        icon: '🚻',
+        width: 1,
         depth: 2,
         category: 'amenity',
-        cost: 2000,
+        cost: 2500,
         interactions: [
-            { relativeX: 0, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', capacity: 4, approach: 'facing', satisfies: ['bathroom'] }
-        ]
+            { relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south', capacity: 4, approach: 'facing', satisfies: ['bathroom'] }
+        ],
+        style: 'bathroom_large'
     },
 
     // Commercial
     gift_shop: {
         name: 'Gift Shop',
         icon: '🎁',
-        width: 2,
-        depth: 2,
+        width: 3,
+        depth: 3,
         category: 'commercial',
         cost: 5000,
+        purchasePrice: 15,  // Average gift purchase price
         interactions: [
-            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', approach: 'enter', satisfies: ['shopping', 'fun'] },
-            { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' }
-        ]
+            // Guests enter and browse for ~30 seconds, may or may not purchase
+            // Entrance on right edge at rotation 0, facing outward (south = +X)
+            { relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south', approach: 'enter', capacity: 6, satisfies: ['shopping', 'fun'] }
+        ],
+        style: 'gift_shop'
     },
     restaurant: {
         name: 'Restaurant',
-        icon: '🍔',
+        icon: '🍽️',
         width: 3,
         depth: 2,
         category: 'commercial',
         cost: 8000,
         interactions: [
-            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', approach: 'enter', satisfies: ['hunger', 'thirst'] },
-            { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'east' },
-            { relativeX: 2, relativeY: 0, type: 'work', entities: ['staff'], facing: 'west' }
-        ]
+            // Entrance on right tile of the 2-tile side (front-right wall at rotation 0)
+            { relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south', approach: 'enter', capacity: 8, satisfies: ['hunger', 'thirst'] }
+        ],
+        style: 'restaurant'
     },
 
     // Buildings - commercial structures
@@ -406,8 +421,8 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 800,
         purchasePrice: 4,
         interactions: [
-            // Can approach from any side
-            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], capacity: 1, approach: 'any', satisfies: ['thirst', 'hunger'] }
+            // Approach from the front (where the display is)
+            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], capacity: 1, approach: 'facing', facing: 'south', satisfies: ['thirst', 'hunger'] }
         ],
         style: 'vending_machine'
     },

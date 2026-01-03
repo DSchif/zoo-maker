@@ -1646,15 +1646,39 @@ export class InputHandler {
             statusEl.className = 'building-status ' + (building.isOpen ? 'status-open' : 'status-closed');
         }
 
-        // Update guests served
+        // Update occupancy (for shops with capacity)
+        const occupancyEl = document.getElementById('selected-building-occupancy');
+        const capacityRow = document.getElementById('building-capacity-row');
+        if (occupancyEl && capacityRow) {
+            // Check if building has capacity methods (Shop class)
+            if (building.getCapacity && building.getOccupancy) {
+                const capacity = building.getCapacity();
+                const occupancy = building.getOccupancy();
+                occupancyEl.textContent = `${occupancy} / ${capacity}`;
+                capacityRow.style.display = '';
+            } else if (building.getActiveReservationCount) {
+                // Fallback to reservation count for Placeables
+                const current = building.getActiveReservationCount();
+                const capacity = building.config?.interactions?.[0]?.capacity || 1;
+                occupancyEl.textContent = `${current} / ${capacity}`;
+                capacityRow.style.display = '';
+            } else {
+                capacityRow.style.display = 'none';
+            }
+        }
+
+        // Update guests served (check both Building methods and Placeable property)
         const servedEl = document.getElementById('selected-building-served');
         if (servedEl) {
-            servedEl.textContent = (building.getTotalUses?.() || 0).toString();
+            const served = building.getTotalUses?.() ?? building.guestsServed ?? 0;
+            servedEl.textContent = served.toString();
         }
 
         const servedTodayEl = document.getElementById('selected-building-served-today');
         if (servedTodayEl) {
-            servedTodayEl.textContent = (building.getTodayUses?.() || 0).toString();
+            // For Placeables without today tracking, just show the total
+            const servedToday = building.getTodayUses?.() ?? building.guestsServed ?? 0;
+            servedTodayEl.textContent = servedToday.toString();
         }
 
         // Update revenue

@@ -189,7 +189,7 @@ export class GiftShop extends Shop {
         super(game, 'gift_shop', tileX, tileY, rotation);
 
         this.capacity = 15;
-        this.requiredStaff = 1;
+        this.requiredStaff = 0; // Operates without staff for now
         this.browseTime = 45;
 
         this.items = [
@@ -214,7 +214,7 @@ export class Restaurant extends Shop {
 
         this.capacity = 30; // Including waiting area
         this.seatingCapacity = 20;
-        this.requiredStaff = 2;
+        this.requiredStaff = 0; // Operates without staff for now
         this.browseTime = 60; // Dining takes longer
 
         this.items = [

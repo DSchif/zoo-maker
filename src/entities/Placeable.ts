@@ -47,6 +47,9 @@ export class Placeable {
     // Interaction reservations (tracks who is using each interaction point)
     private reservations: InteractionReservation[] = [];
 
+    // Statistics tracking
+    public guestsServed: number = 0;
+
     // Reference to game
     protected game: Game;
 
@@ -311,6 +314,13 @@ export class Placeable {
             const interaction = this.config.interactions[r.interactionIndex];
             return interaction && interaction.type === type;
         }).length;
+    }
+
+    /**
+     * Get total active reservation count (for occupancy display)
+     */
+    getActiveReservationCount(): number {
+        return this.reservations.length;
     }
 
     /**

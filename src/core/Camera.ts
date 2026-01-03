@@ -178,6 +178,27 @@ export class Camera {
     }
 
     /**
+     * Zoom in by a fixed amount, centered on viewport
+     */
+    zoomIn(): void {
+        this.zoom = Math.min(this.maxZoom, this.zoom + 0.1);
+    }
+
+    /**
+     * Zoom out by a fixed amount, centered on viewport
+     */
+    zoomOut(): void {
+        this.zoom = Math.max(this.minZoom, this.zoom - 0.1);
+    }
+
+    /**
+     * Set zoom to a specific level
+     */
+    setZoom(level: number): void {
+        this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, level));
+    }
+
+    /**
      * Start panning from a screen position
      */
     startPan(screenX: number, screenY: number): void {

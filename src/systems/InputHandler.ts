@@ -82,6 +82,23 @@ export class InputHandler {
     private entrancePanelVisible: boolean = false;
     private entrancePanelUpdateInterval: number | null = null;
 
+    // Touch mode state
+    public touchMode: boolean = false;
+    public selectedTile: GridPos | null = null;  // For two-step placement in touch mode
+    private touchStartPos: { x: number; y: number } | null = null;
+    private touchStartTime: number = 0;
+    private initialPinchDistance: number = 0;
+    private initialZoom: number = 1;
+    private isTouchPanning: boolean = false;
+
+    // Touch fence/path placement state (two-step: tap start, drag to end, confirm)
+    public touchFenceStart: TileEdge | null = null;  // First point for fence
+    public touchFenceEnd: TileEdge | null = null;    // Second point for fence
+    public touchPathStart: GridPos | null = null;    // First point for path
+    public touchPathEnd: GridPos | null = null;      // Second point for path
+    public touchPlacementReady: boolean = false;     // True when ready to confirm
+    private wasTwoFingerGesture: boolean = false;    // Track if last gesture was two-finger
+
     constructor(game: Game) {
         this.game = game;
         this.bindEvents();
@@ -172,6 +189,38 @@ export class InputHandler {
             }
         });
 
+        // Touch mode toggle
+        const touchModeToggle = document.getElementById('touch-mode-toggle') as HTMLInputElement;
+        touchModeToggle?.addEventListener('change', () => {
+            this.setTouchMode(touchModeToggle.checked);
+        });
+
+        // Touch control buttons
+        const touchRotateBtn = document.getElementById('touch-rotate-btn');
+        touchRotateBtn?.addEventListener('click', () => {
+            this.rotatePlacement();
+        });
+
+        const touchZoomInBtn = document.getElementById('touch-zoom-in-btn');
+        touchZoomInBtn?.addEventListener('click', () => {
+            this.game.camera.zoomIn();
+        });
+
+        const touchZoomOutBtn = document.getElementById('touch-zoom-out-btn');
+        touchZoomOutBtn?.addEventListener('click', () => {
+            this.game.camera.zoomOut();
+        });
+
+        const touchConfirmBtn = document.getElementById('touch-confirm-btn');
+        touchConfirmBtn?.addEventListener('click', () => {
+            this.confirmTouchPlacement();
+        });
+
+        const touchCancelBtn = document.getElementById('touch-cancel-btn');
+        touchCancelBtn?.addEventListener('click', () => {
+            this.cancelTouchPlacement();
+        });
+
         // Info panel close
         const infoClose = document.getElementById('info-close');
         infoClose?.addEventListener('click', () => {
@@ -203,6 +252,24 @@ export class InputHandler {
         exhibitNameInput?.addEventListener('change', () => {
             if (this.selectedExhibit && exhibitNameInput.value.trim()) {
                 this.selectedExhibit.setName(exhibitNameInput.value.trim());
+            }
+        });
+        // Enter key dismisses keyboard and saves
+        exhibitNameInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                exhibitNameInput.blur();
+            }
+        });
+
+        // New exhibit name input (modal) - Enter key handling
+        const newExhibitNameInput = document.getElementById('exhibit-name-input') as HTMLInputElement;
+        newExhibitNameInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Click the confirm button to save
+                const confirmBtn = document.getElementById('exhibit-name-confirm');
+                confirmBtn?.click();
             }
         });
 
@@ -1547,16 +1614,55 @@ export class InputHandler {
 
         if (e.touches.length === 1) {
             const pos = this.getTouchCanvasPos(e.touches[0]);
+            this.touchStartPos = pos;
+            this.touchStartTime = Date.now();
             this.hoveredScreenPos = pos;
             this.hoveredTile = this.game.camera.getTileAt(pos.x, pos.y);
-            this.handleClick();
+            this.hoveredEdge = this.game.camera.getTileEdgeAt(pos.x, pos.y);
+
+            if (this.touchMode) {
+                const tool = this.game.currentTool;
+                const isPlacementTool = ['terrain', 'path', 'fence', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
+                const hasItem = !!this.game.currentItem;
+
+                // For fence/path with start point set, single finger selects end point (no pan)
+                if (tool === 'fence' && this.touchFenceStart && !this.touchPlacementReady) {
+                    // Don't pan - we're selecting second fence point
+                    this.isTouchPanning = false;
+                    // Immediately start tracking as fence drag
+                    this.fenceDragStart = this.touchFenceStart;
+                    this.isFenceDragging = true;
+                } else if (tool === 'path' && this.touchPathStart && !this.touchPlacementReady) {
+                    // Don't pan - we're selecting second path point
+                    this.isTouchPanning = false;
+                    // Immediately start tracking as path drag
+                    this.pathDragStart = this.touchPathStart;
+                    this.isPathDragging = true;
+                } else if (tool === 'select' || !isPlacementTool || !hasItem || this.touchPlacementReady) {
+                    // Select tool OR no placement tool OR no item - single finger pans
+                    this.game.camera.startPan(pos.x, pos.y);
+                    this.isTouchPanning = false; // Will be set to true if we actually move
+                } else {
+                    // Placement tool with item selected - don't pan, let user drag to position
+                    this.isTouchPanning = false;
+                }
+            } else {
+                // In non-touch mode, single tap performs action immediately
+                this.handleClick();
+            }
         } else if (e.touches.length === 2) {
-            // Two-finger: start panning
+            // Two-finger: pinch zoom and/or pan - mark as two-finger gesture
+            this.wasTwoFingerGesture = true;
+
             const pos1 = this.getTouchCanvasPos(e.touches[0]);
             const pos2 = this.getTouchCanvasPos(e.touches[1]);
             const cx = (pos1.x + pos2.x) / 2;
             const cy = (pos1.y + pos2.y) / 2;
+
+            this.initialPinchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            this.initialZoom = this.game.camera.zoom;
             this.game.camera.startPan(cx, cy);
+            this.isTouchPanning = true;
         }
     }
 
@@ -1570,12 +1676,50 @@ export class InputHandler {
             const pos = this.getTouchCanvasPos(e.touches[0]);
             this.hoveredScreenPos = pos;
             this.hoveredTile = this.game.camera.getTileAt(pos.x, pos.y);
+            this.hoveredEdge = this.game.camera.getTileEdgeAt(pos.x, pos.y);
+
+            if (this.touchMode && this.touchStartPos) {
+                const tool = this.game.currentTool;
+                const dx = pos.x - this.touchStartPos.x;
+                const dy = pos.y - this.touchStartPos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const isPlacementTool = ['terrain', 'path', 'fence', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
+                const hasItem = !!this.game.currentItem;
+
+                // For fence/path with start point, update end point as we move
+                if (tool === 'fence' && this.touchFenceStart && !this.touchPlacementReady) {
+                    // Always update end point when dragging for fence
+                    this.touchFenceEnd = this.hoveredEdge;
+                } else if (tool === 'path' && this.touchPathStart && !this.touchPlacementReady) {
+                    // Always update end point when dragging for path
+                    this.touchPathEnd = this.hoveredTile;
+                } else if (tool === 'select' || !isPlacementTool || !hasItem || this.touchPlacementReady) {
+                    // Select tool OR no placement tool OR no item - normal panning
+                    if (distance > 10) {
+                        this.isTouchPanning = true;
+                        this.game.camera.updatePan(pos.x, pos.y);
+                    }
+                } else {
+                    // Placement tool with item - don't pan, just update hovered position for preview
+                    // (hoveredTile already updated above)
+                }
+            }
         } else if (e.touches.length === 2) {
             const pos1 = this.getTouchCanvasPos(e.touches[0]);
             const pos2 = this.getTouchCanvasPos(e.touches[1]);
             const cx = (pos1.x + pos2.x) / 2;
             const cy = (pos1.y + pos2.y) / 2;
+
+            // Handle pan
             this.game.camera.updatePan(cx, cy);
+
+            // Handle pinch zoom
+            const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            if (this.initialPinchDistance > 0) {
+                const scale = currentDistance / this.initialPinchDistance;
+                const newZoom = Math.min(3, Math.max(0.5, this.initialZoom * scale));
+                this.game.camera.setZoom(newZoom);
+            }
         }
     }
 
@@ -1585,8 +1729,107 @@ export class InputHandler {
     private onTouchEnd(e: TouchEvent): void {
         if (e.touches.length === 0) {
             this.game.camera.endPan();
-            this.hoveredTile = null;
-            this.hoveredScreenPos = null;
+
+            // Skip placement logic if this was a two-finger gesture (zoom/pan only)
+            const skipPlacement = this.wasTwoFingerGesture;
+            this.wasTwoFingerGesture = false;
+
+            // In touch mode, handle touch end based on current state
+            if (this.touchMode && this.touchStartPos && !skipPlacement) {
+                const tapDuration = Date.now() - this.touchStartTime;
+                const tool = this.game.currentTool;
+
+                // Handle fence tool two-step placement
+                if (tool === 'fence' && this.game.currentItem) {
+                    // If placement is ready, ignore all touches (only confirm/cancel buttons work)
+                    if (this.touchPlacementReady) {
+                        // Do nothing - locked until confirm or cancel
+                    } else if (!this.touchFenceStart) {
+                        // First touch release: set start point wherever finger is
+                        if (this.hoveredEdge) {
+                            this.touchFenceStart = { ...this.hoveredEdge };
+                            this.showTouchConfirmBar('Tap or drag to end point');
+                        }
+                    } else {
+                        // Second touch release: set end point and lock for confirmation
+                        if (this.hoveredEdge) {
+                            this.touchFenceEnd = { ...this.hoveredEdge };
+                            this.touchPlacementReady = true;
+                            this.showTouchConfirmBar('Confirm fence placement?');
+                        }
+                    }
+                }
+                // Handle path tool two-step placement
+                else if (tool === 'path' && this.game.currentItem) {
+                    // If placement is ready, ignore all touches (only confirm/cancel buttons work)
+                    if (this.touchPlacementReady) {
+                        // Do nothing - locked until confirm or cancel
+                    } else if (!this.touchPathStart) {
+                        // First touch release: set start point wherever finger is
+                        if (this.hoveredTile) {
+                            this.touchPathStart = { ...this.hoveredTile };
+                            this.showTouchConfirmBar('Tap or drag to end point');
+                        }
+                    } else {
+                        // Second touch release: set end point and lock for confirmation
+                        if (this.hoveredTile) {
+                            this.touchPathEnd = { ...this.hoveredTile };
+                            this.touchPlacementReady = true;
+                            this.showTouchConfirmBar('Confirm path placement?');
+                        }
+                    }
+                }
+                // Handle other placement tools - place on release (no two-step needed with drag-to-position)
+                else {
+                    const isPlacementTool = ['terrain', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
+
+                    if (isPlacementTool && this.game.currentItem && this.hoveredTile) {
+                        // Place immediately on release
+                        this.handleClick();
+                    } else if (!this.isTouchPanning && tapDuration < 300) {
+                        // For select tool or quick taps - handle click
+                        this.handleClick();
+                    }
+                }
+            }
+
+            // Reset touch state (but keep fence/path start/end for pending placement)
+            this.touchStartPos = null;
+            this.isTouchPanning = false;
+            this.initialPinchDistance = 0;
+
+            // Clear drag preview states (these are only for live dragging)
+            this.fenceDragStart = null;
+            this.isFenceDragging = false;
+            this.pathDragStart = null;
+            this.isPathDragging = false;
+
+            // Don't clear hoveredTile/Edge in touch mode if we have pending placement
+            const hasPendingPlacement = this.selectedTile || this.touchFenceStart || this.touchPathStart;
+            if (!this.touchMode || !hasPendingPlacement) {
+                this.hoveredTile = null;
+                this.hoveredScreenPos = null;
+                this.hoveredEdge = null;
+            }
+        } else if (e.touches.length === 1) {
+            // Went from 2 fingers to 1, reset pinch
+            this.initialPinchDistance = 0;
+            const pos = this.getTouchCanvasPos(e.touches[0]);
+            this.game.camera.startPan(pos.x, pos.y);
+        }
+    }
+
+    /**
+     * Show the touch confirm bar with a message
+     */
+    private showTouchConfirmBar(message: string): void {
+        const confirmBar = document.getElementById('touch-confirm-bar');
+        const confirmText = document.getElementById('touch-confirm-text');
+        if (confirmBar) {
+            confirmBar.classList.remove('hidden');
+        }
+        if (confirmText) {
+            confirmText.textContent = message;
         }
     }
 
@@ -2451,5 +2694,188 @@ export class InputHandler {
         if (undoBtn) {
             undoBtn.disabled = this.undoHistory.length === 0;
         }
+    }
+
+    // =============================================
+    // Touch Mode Methods
+    // =============================================
+
+    /**
+     * Enable or disable touch mode
+     */
+    setTouchMode(enabled: boolean): void {
+        this.touchMode = enabled;
+
+        // Toggle body class for CSS styling
+        if (enabled) {
+            document.body.classList.add('touch-mode');
+        } else {
+            document.body.classList.remove('touch-mode');
+        }
+
+        // Show/hide touch controls
+        const touchControls = document.getElementById('touch-controls');
+        if (touchControls) {
+            if (enabled) {
+                touchControls.classList.remove('hidden');
+            } else {
+                touchControls.classList.add('hidden');
+            }
+        }
+
+        // Clear any selected tile when disabling
+        if (!enabled) {
+            this.cancelTouchPlacement();
+        }
+
+        console.log(`Touch mode ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Select a tile for two-step placement in touch mode
+     */
+    selectTileForPlacement(tile: GridPos): void {
+        this.selectedTile = { x: tile.x, y: tile.y };
+
+        // Show confirm bar for placement tools (fence and path place immediately, no confirm needed)
+        const tool = this.game.currentTool;
+        const needsConfirm = ['terrain', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
+
+        const confirmBar = document.getElementById('touch-confirm-bar');
+        const confirmText = document.getElementById('touch-confirm-text');
+
+        if (confirmBar && needsConfirm && this.game.currentItem) {
+            confirmBar.classList.remove('hidden');
+            if (confirmText) {
+                confirmText.textContent = `Place ${this.game.currentItem}?`;
+            }
+        }
+    }
+
+    /**
+     * Confirm the touch placement
+     */
+    confirmTouchPlacement(): void {
+        const tool = this.game.currentTool;
+
+        // Handle fence placement
+        if (tool === 'fence' && this.touchFenceStart && this.touchFenceEnd) {
+            const fenceType = this.game.currentItem as FenceType;
+            if (fenceType) {
+                const costs: Record<string, number> = {
+                    wood: 20, iron: 40, concrete: 60
+                };
+                const cost = costs[fenceType] || 20;
+
+                const edges = this.calculateLShapeEdges(this.touchFenceStart, this.touchFenceEnd);
+                const placedEdges: TileEdge[] = [];
+
+                for (const edge of edges) {
+                    // Skip if fence already exists
+                    const existingFence = this.game.world.getFence(edge.tileX, edge.tileY, edge.edge);
+                    if (existingFence) continue;
+
+                    if (this.game.spendMoney(cost)) {
+                        this.game.world.setFence(edge.tileX, edge.tileY, edge.edge, fenceType);
+                        this.game.initializeFenceCondition(edge.tileX, edge.tileY, edge.edge);
+                        placedEdges.push(edge);
+                    }
+                }
+
+                // Check for exhibit creation (same logic as placeFences)
+                if (placedEdges.length > 0) {
+                    const lastEdge = placedEdges[placedEdges.length - 1];
+                    for (const edge of placedEdges) {
+                        const exhibit = this.game.checkForNewExhibit(edge.tileX, edge.tileY, edge.edge, lastEdge);
+                        if (exhibit) {
+                            break;
+                        }
+                    }
+                    this.game.pathfinding.updateWorld(this.game.world);
+                }
+            }
+        }
+        // Handle path placement
+        else if (tool === 'path' && this.touchPathStart && this.touchPathEnd) {
+            const pathType = this.game.currentItem as PathType;
+            if (pathType) {
+                const tiles = this.calculateLShapeTiles(this.touchPathStart, this.touchPathEnd);
+                for (const tile of tiles) {
+                    this.game.world.setPath(tile.x, tile.y, pathType);
+                }
+            }
+        }
+        // Handle other tile placements
+        else if (this.selectedTile) {
+            // Temporarily set hovered tile to selected tile and trigger placement
+            const prevHovered = this.hoveredTile;
+            this.hoveredTile = this.selectedTile;
+            this.handleClick();
+            this.hoveredTile = prevHovered;
+        }
+
+        this.cancelTouchPlacement();
+    }
+
+    /**
+     * Cancel the touch placement
+     */
+    cancelTouchPlacement(): void {
+        // Clear all touch placement state
+        this.selectedTile = null;
+        this.touchFenceStart = null;
+        this.touchFenceEnd = null;
+        this.touchPathStart = null;
+        this.touchPathEnd = null;
+        this.touchPlacementReady = false;
+
+        // Clear drag preview state
+        this.fenceDragStart = null;
+        this.isFenceDragging = false;
+        this.pathDragStart = null;
+        this.isPathDragging = false;
+
+        // Clear hover states to prevent stray highlights
+        this.hoveredEdge = null;
+        this.hoveredTile = null;
+        this.hoveredScreenPos = null;
+
+        // Hide confirm bar
+        const confirmBar = document.getElementById('touch-confirm-bar');
+        if (confirmBar) {
+            confirmBar.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Update touch confirm bar visibility based on current tool
+     */
+    private updateTouchConfirmBar(): void {
+        if (!this.touchMode) return;
+
+        const tool = this.game.currentTool;
+        const hasItem = !!this.game.currentItem;
+        const hasSelectedTile = !!this.selectedTile;
+
+        // Only show for placement tools when item selected and tile selected (fence and path place immediately)
+        const needsConfirm = ['terrain', 'animal', 'staff', 'foliage', 'shelter', 'building'].includes(tool);
+
+        const confirmBar = document.getElementById('touch-confirm-bar');
+        if (confirmBar) {
+            if (needsConfirm && hasItem && hasSelectedTile) {
+                confirmBar.classList.remove('hidden');
+            } else {
+                confirmBar.classList.add('hidden');
+            }
+        }
+    }
+
+    /**
+     * Calculate distance between two touch points
+     */
+    private getTouchDistance(touch1: Touch, touch2: Touch): number {
+        const dx = touch2.clientX - touch1.clientX;
+        const dy = touch2.clientY - touch1.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }

@@ -2,8 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Zoo Maker</title>
+
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Zoo Maker">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Theme color for browser chrome -->
+    <meta name="theme-color" content="#2a2a2a">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
     <link rel="stylesheet" href="/src/ui/style.css">
 </head>
 <body>
@@ -30,6 +43,14 @@
             </div>
             <div class="settings-body">
                 <div class="settings-section">
+                    <h4>Controls</h4>
+                    <label class="settings-toggle">
+                        <input type="checkbox" id="touch-mode-toggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Touch Mode</span>
+                    </label>
+                </div>
+                <div class="settings-section">
                     <h4>Debug Options</h4>
                     <label class="settings-toggle">
                         <input type="checkbox" id="show-grid-toggle">
@@ -42,6 +63,22 @@
                         <span class="toggle-label">Show FPS Counter</span>
                     </label>
                 </div>
+            </div>
+        </div>
+
+        <!-- Touch Controls (visible in touch mode) -->
+        <div id="touch-controls" class="hidden">
+            <div class="touch-controls-group touch-controls-left">
+                <button class="touch-control-btn" id="touch-rotate-btn" title="Rotate (R)">🔄</button>
+            </div>
+            <div class="touch-controls-group touch-controls-right">
+                <button class="touch-control-btn" id="touch-zoom-in-btn" title="Zoom In">+</button>
+                <button class="touch-control-btn" id="touch-zoom-out-btn" title="Zoom Out">−</button>
+            </div>
+            <div id="touch-confirm-bar" class="hidden">
+                <span id="touch-confirm-text">Tap to place</span>
+                <button class="touch-confirm-btn" id="touch-confirm-btn">✓ Confirm</button>
+                <button class="touch-cancel-btn" id="touch-cancel-btn">✕ Cancel</button>
             </div>
         </div>
 

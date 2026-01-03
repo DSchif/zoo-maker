@@ -2943,43 +2943,83 @@ export class Renderer {
             return;
         }
 
-        const hoveredTile = input.hoveredTile;
-        if (!hoveredTile) return;
+        // In touch mode, draw selected tile highlight if present
+        if (input.touchMode && input.selectedTile) {
+            this.drawSelectedTileHighlight(input.selectedTile.x, input.selectedTile.y);
+        }
 
         // Get tool info
         const tool = this.game.currentTool;
         const hw = TILE_WIDTH / 2;
         const hh = TILE_HEIGHT / 2;
+        const hoveredTile = input.hoveredTile;
 
-        // Handle fence tool overlay
+        // Handle fence tool overlay (before hoveredTile check - need to show pending placement)
         if (tool === 'fence') {
-            // Show L-shape preview if dragging
-            if (input.isFenceDragging && input.fenceDragStart && input.hoveredEdge) {
+            // In touch mode, always show start point if set (cyan)
+            if (input.touchMode && input.touchFenceStart) {
+                this.drawEdgePreview(input.touchFenceStart, 0x00ffff, 0.9); // Cyan for start point
+            }
+
+            // In touch mode with placement ready, show the full L-shape in green
+            if (input.touchMode && input.touchPlacementReady && input.touchFenceStart && input.touchFenceEnd) {
+                const edges = input.calculateLShapeEdges(input.touchFenceStart, input.touchFenceEnd);
+                for (const edge of edges) {
+                    this.drawEdgePreview(edge, 0x00ff00, 0.8); // Green for ready to confirm
+                }
+            }
+            // Show L-shape preview if dragging for second point
+            else if (input.isFenceDragging && input.fenceDragStart && input.hoveredEdge) {
                 const edges = input.calculateLShapeEdges(input.fenceDragStart, input.hoveredEdge);
                 for (const edge of edges) {
                     this.drawEdgePreview(edge, 0xffff00, 0.7);
                 }
-            } else if (input.hoveredEdge) {
-                // Just show hovered edge
+            }
+            // Touch mode selecting first point: show hovered edge preview
+            else if (input.touchMode && !input.touchFenceStart && input.hoveredEdge) {
+                this.drawEdgePreview(input.hoveredEdge, 0xffff00, 0.5);
+            }
+            // Normal mode: just show hovered edge
+            else if (!input.touchMode && input.hoveredEdge) {
                 this.drawEdgePreview(input.hoveredEdge, 0xffff00, 0.5);
             }
             return;
         }
 
-        // Handle path tool overlay
+        // Handle path tool overlay (before hoveredTile check - need to show pending placement)
         if (tool === 'path') {
-            // Show L-shape preview if dragging
-            if (input.isPathDragging && input.pathDragStart && hoveredTile) {
+            // In touch mode, always show start point if set (cyan)
+            if (input.touchMode && input.touchPathStart) {
+                this.drawTilePreview(input.touchPathStart.x, input.touchPathStart.y, 0x00ffff, 0.9); // Cyan for start point
+            }
+
+            // In touch mode with placement ready, show the full L-shape in green
+            if (input.touchMode && input.touchPlacementReady && input.touchPathStart && input.touchPathEnd) {
+                const tiles = input.calculateLShapeTiles(input.touchPathStart, input.touchPathEnd);
+                for (const tile of tiles) {
+                    this.drawTilePreview(tile.x, tile.y, 0x00ff00, 0.8); // Green for ready to confirm
+                }
+            }
+            // Show L-shape preview if dragging for second point
+            else if (input.isPathDragging && input.pathDragStart && hoveredTile) {
                 const tiles = input.calculateLShapeTiles(input.pathDragStart, hoveredTile);
                 for (const tile of tiles) {
                     this.drawTilePreview(tile.x, tile.y, 0x00aaff, 0.5);
                 }
-            } else {
-                // Just show hovered tile
+            }
+            // Touch mode selecting first point: show hovered tile preview
+            else if (input.touchMode && !input.touchPathStart && hoveredTile) {
+                this.drawTilePreview(hoveredTile.x, hoveredTile.y, 0x00aaff, 0.5);
+            }
+            // Normal mode: just show hovered tile
+            else if (!input.touchMode && hoveredTile) {
                 this.drawTilePreview(hoveredTile.x, hoveredTile.y, 0x00aaff, 0.5);
             }
             return;
         }
+
+        // For other tools, require hoveredTile
+        if (!hoveredTile) return;
 
         // Handle terrain tool overlay with brush size preview
         if (tool === 'terrain') {
@@ -3157,6 +3197,25 @@ export class Renderer {
         ]);
         this.overlayGraphics.fill({ color, alpha: alpha * 0.5 });
         this.overlayGraphics.stroke({ width: 2, color, alpha });
+    }
+
+    /**
+     * Draw a highlighted tile for touch mode selection (pulsing cyan border)
+     */
+    private drawSelectedTileHighlight(tileX: number, tileY: number): void {
+        const screenPos = this.game.camera.tileToScreen(tileX, tileY);
+        const hw = TILE_WIDTH / 2;
+        const hh = TILE_HEIGHT / 2;
+
+        // Draw a prominent cyan border with fill
+        this.overlayGraphics.poly([
+            { x: screenPos.x, y: screenPos.y - hh },
+            { x: screenPos.x + hw, y: screenPos.y },
+            { x: screenPos.x, y: screenPos.y + hh },
+            { x: screenPos.x - hw, y: screenPos.y },
+        ]);
+        this.overlayGraphics.fill({ color: 0x00ffff, alpha: 0.3 });
+        this.overlayGraphics.stroke({ width: 3, color: 0x00ffff, alpha: 0.9 });
     }
 
     /**

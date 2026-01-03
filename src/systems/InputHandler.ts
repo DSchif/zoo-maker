@@ -2076,12 +2076,18 @@ export class InputHandler {
     }
 
     /**
-     * Find guest near click position with larger hitbox
+     * Find guest near click position using sprite bounds
      */
     private findGuestNearClick(screenX: number, screenY: number): any {
         const camera = this.game.camera;
         let closestGuest: any = null;
-        let closestDist = 50; // Max click distance in pixels
+        let closestDist = Infinity;
+
+        // Guest sprite parameters (from Renderer.drawGuestSprite)
+        // anchor: (0.5, 1), scale: 0.6, y offset: +4
+        // Approximate sprite size: 48x48 pixels, scaled to ~29x29
+        const spriteWidth = 48 * 0.6;
+        const spriteHeight = 48 * 0.6;
 
         for (const guest of this.game.guests) {
             // Skip guests that have left
@@ -2095,15 +2101,24 @@ export class InputHandler {
             const worldX = (screenX - camera.viewportWidth / 2) / camera.zoom + camera.x;
             const worldY = (screenY - camera.viewportHeight / 2) / camera.zoom + camera.y;
 
-            // Calculate distance (guest sprites are centered horizontally, bottom-aligned)
-            const dx = guestScreen.x - worldX;
-            const dy = (guestScreen.y - 15) - worldY; // Offset for sprite height
+            // Sprite bounds (anchor 0.5, 1 means centered horizontally, bottom-aligned)
+            const spriteLeft = guestScreen.x - spriteWidth / 2;
+            const spriteRight = guestScreen.x + spriteWidth / 2;
+            const spriteBottom = guestScreen.y + 4; // y offset from drawGuestSprite
+            const spriteTop = spriteBottom - spriteHeight;
 
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Check if click is within sprite bounds
+            if (worldX >= spriteLeft && worldX <= spriteRight &&
+                worldY >= spriteTop && worldY <= spriteBottom) {
+                // Calculate distance to sprite center for picking closest
+                const centerX = guestScreen.x;
+                const centerY = spriteTop + spriteHeight / 2;
+                const dist = Math.sqrt((worldX - centerX) ** 2 + (worldY - centerY) ** 2);
 
-            if (dist < closestDist) {
-                closestDist = dist;
-                closestGuest = guest;
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestGuest = guest;
+                }
             }
         }
 
@@ -2591,6 +2606,12 @@ export class InputHandler {
                 return;
             }
 
+            // Check for entrance gate click (priority over guests)
+            if (this.isNearEntranceGate(x, y)) {
+                this.showEntrancePanel();
+                return;
+            }
+
             // Check for guests near the click position (only if visible)
             if (this.game.showGuests) {
                 const clickedGuest = this.findGuestNearClick(
@@ -2654,12 +2675,6 @@ export class InputHandler {
                     this.showExhibitPanel(exhibit);
                     return;
                 }
-            }
-
-            // Check for entrance gate click
-            if (this.isNearEntranceGate(x, y)) {
-                this.showEntrancePanel();
-                return;
             }
 
             // Clicking elsewhere with select tool hides panels

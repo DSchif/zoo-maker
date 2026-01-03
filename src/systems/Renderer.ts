@@ -1533,13 +1533,13 @@ export class Renderer {
 
         const items: RenderItem[] = [];
 
-        // Add entrance gate
+        // Add entrance gate - rendered with higher depth so arch is in front of guests walking through
         const entrance = this.game.world.getEntrancePosition();
         const gateScreenPos = this.game.camera.tileToScreen(entrance.x, entrance.y);
         items.push({
             type: 'entrance_gate',
             entity: null,
-            depth: entrance.x + entrance.y + 0.5, // Slightly in front of the entrance tile
+            depth: entrance.x + entrance.y + 2, // Higher depth so arch renders in front of guests
             screenX: gateScreenPos.x,
             screenY: gateScreenPos.y,
         });

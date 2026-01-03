@@ -96,6 +96,45 @@ body {
     border-color: #ffaa00;
 }
 
+/* Top Bar Right Section */
+#top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Visibility Toggles */
+#visibility-toggles {
+    display: flex;
+    gap: 5px;
+    background: #1a1a1a;
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 2px solid #4a7c23;
+}
+
+.visibility-btn {
+    background: linear-gradient(180deg, #4a4a4a 0%, #333 100%);
+    border: 2px solid #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 8px;
+    transition: all 0.15s ease;
+    opacity: 0.5;
+}
+
+.visibility-btn:hover {
+    background: linear-gradient(180deg, #5a5a5a 0%, #444 100%);
+    border-color: #888;
+}
+
+.visibility-btn.active {
+    opacity: 1;
+    background: linear-gradient(180deg, #4a7c23 0%, #2d5016 100%);
+    border-color: #6aac33;
+}
+
 /* Tool Panel */
 #tool-panel {
     position: absolute;

@@ -96,6 +96,11 @@ export class Game {
     public shelters: Shelter[] = [];
     public buildings: Building[] = [];
 
+    // Visibility toggles
+    public showGuests: boolean = true;
+    public showFoliage: boolean = true;
+    public showBuildings: boolean = true;
+
     // Staff ID counters
     private staffIdCounters: Record<string, number> = {
         zookeeper: 0,

@@ -1527,30 +1527,34 @@ export class Renderer {
             });
         }
 
-        // Add guests
-        for (const guest of this.game.guests) {
-            const worldPos = guest.getWorldPos();
-            const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
-            items.push({
-                type: 'guest',
-                entity: guest,
-                depth: guest.getDepth(),
-                screenX: screenPos.x,
-                screenY: screenPos.y,
-            });
+        // Add guests (if visible)
+        if (this.game.showGuests) {
+            for (const guest of this.game.guests) {
+                const worldPos = guest.getWorldPos();
+                const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                items.push({
+                    type: 'guest',
+                    entity: guest,
+                    depth: guest.getDepth(),
+                    screenX: screenPos.x,
+                    screenY: screenPos.y,
+                });
+            }
         }
 
-        // Add foliage
-        for (const foliageItem of this.game.foliage) {
-            const worldPos = foliageItem.getWorldPos();
-            const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
-            items.push({
-                type: 'foliage',
-                entity: foliageItem,
-                depth: foliageItem.getDepth(),
-                screenX: screenPos.x,
-                screenY: screenPos.y,
-            });
+        // Add foliage (if visible)
+        if (this.game.showFoliage) {
+            for (const foliageItem of this.game.foliage) {
+                const worldPos = foliageItem.getWorldPos();
+                const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                items.push({
+                    type: 'foliage',
+                    entity: foliageItem,
+                    depth: foliageItem.getDepth(),
+                    screenX: screenPos.x,
+                    screenY: screenPos.y,
+                });
+            }
         }
 
         // Add food piles
@@ -1566,30 +1570,34 @@ export class Renderer {
             });
         }
 
-        // Add shelters
-        for (const shelter of this.game.shelters) {
-            const worldPos = shelter.getWorldPos();
-            const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
-            items.push({
-                type: 'shelter',
-                entity: shelter,
-                depth: shelter.getDepth(),
-                screenX: screenPos.x,
-                screenY: screenPos.y,
-            });
+        // Add shelters (if buildings visible)
+        if (this.game.showBuildings) {
+            for (const shelter of this.game.shelters) {
+                const worldPos = shelter.getWorldPos();
+                const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                items.push({
+                    type: 'shelter',
+                    entity: shelter,
+                    depth: shelter.getDepth(),
+                    screenX: screenPos.x,
+                    screenY: screenPos.y,
+                });
+            }
         }
 
-        // Add buildings
-        for (const building of this.game.buildings) {
-            const worldPos = building.getWorldPos();
-            const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
-            items.push({
-                type: 'building',
-                entity: building,
-                depth: building.getDepth(),
-                screenX: screenPos.x,
-                screenY: screenPos.y,
-            });
+        // Add buildings (if visible)
+        if (this.game.showBuildings) {
+            for (const building of this.game.buildings) {
+                const worldPos = building.getWorldPos();
+                const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                items.push({
+                    type: 'building',
+                    entity: building,
+                    depth: building.getDepth(),
+                    screenX: screenPos.x,
+                    screenY: screenPos.y,
+                });
+            }
         }
 
         // Sort by depth (painter's algorithm)

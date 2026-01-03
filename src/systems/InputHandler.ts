@@ -176,6 +176,34 @@ export class InputHandler {
             settingsPanel?.classList.add('hidden');
         });
 
+        // Visibility toggle buttons
+        const toggleGuests = document.getElementById('toggle-guests');
+        const toggleFoliage = document.getElementById('toggle-foliage');
+        const toggleBuildings = document.getElementById('toggle-buildings');
+
+        toggleGuests?.addEventListener('click', () => {
+            this.game.showGuests = !this.game.showGuests;
+            toggleGuests.classList.toggle('active', this.game.showGuests);
+            // Hide guest panel if hiding guests
+            if (!this.game.showGuests) {
+                this.hideSelectedGuestPanel();
+            }
+        });
+
+        toggleFoliage?.addEventListener('click', () => {
+            this.game.showFoliage = !this.game.showFoliage;
+            toggleFoliage.classList.toggle('active', this.game.showFoliage);
+        });
+
+        toggleBuildings?.addEventListener('click', () => {
+            this.game.showBuildings = !this.game.showBuildings;
+            toggleBuildings.classList.toggle('active', this.game.showBuildings);
+            // Hide shelter panel if hiding buildings
+            if (!this.game.showBuildings) {
+                this.hideSelectedShelterPanel();
+            }
+        });
+
         // Grid toggle
         const showGridToggle = document.getElementById('show-grid-toggle') as HTMLInputElement;
         showGridToggle?.addEventListener('change', () => {
@@ -2121,27 +2149,31 @@ export class InputHandler {
                 return;
             }
 
-            // Check for guests near the click position
-            const clickedGuest = this.findGuestNearClick(
-                this.hoveredScreenPos?.x || 0,
-                this.hoveredScreenPos?.y || 0
-            );
-            if (clickedGuest) {
-                this.hideSelectedStaffPanel();
-                this.hideSelectedShelterPanel();
-                this.hideSelectedAnimalPanel();
-                this.showSelectedGuestPanel(clickedGuest);
-                return;
+            // Check for guests near the click position (only if visible)
+            if (this.game.showGuests) {
+                const clickedGuest = this.findGuestNearClick(
+                    this.hoveredScreenPos?.x || 0,
+                    this.hoveredScreenPos?.y || 0
+                );
+                if (clickedGuest) {
+                    this.hideSelectedStaffPanel();
+                    this.hideSelectedShelterPanel();
+                    this.hideSelectedAnimalPanel();
+                    this.showSelectedGuestPanel(clickedGuest);
+                    return;
+                }
             }
 
-            // Check for shelter clicks
-            const clickedShelter = this.game.getShelterAtTile(x, y);
-            if (clickedShelter) {
-                this.hideSelectedStaffPanel();
-                this.hideSelectedAnimalPanel();
-                this.hideSelectedGuestPanel();
-                this.showSelectedShelterPanel(clickedShelter);
-                return;
+            // Check for shelter clicks (only if buildings visible)
+            if (this.game.showBuildings) {
+                const clickedShelter = this.game.getShelterAtTile(x, y);
+                if (clickedShelter) {
+                    this.hideSelectedStaffPanel();
+                    this.hideSelectedAnimalPanel();
+                    this.hideSelectedGuestPanel();
+                    this.showSelectedShelterPanel(clickedShelter);
+                    return;
+                }
             }
 
             // Check for gate clicks

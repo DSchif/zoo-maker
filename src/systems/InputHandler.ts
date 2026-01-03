@@ -49,6 +49,10 @@ export class InputHandler {
     public pathDragStart: GridPos | null = null;
     public isPathDragging: boolean = false;
 
+    // Demolish drag state
+    public demolishDragStart: GridPos | null = null;
+    public isDemolishDragging: boolean = false;
+
     // Undo history
     private undoHistory: UndoAction[] = [];
     private readonly maxUndoHistory: number = 50;
@@ -1748,8 +1752,8 @@ export class InputHandler {
         this.hoveredScreenPos = { x: e.offsetX, y: e.offsetY };
         this.hoveredTile = this.game.camera.getTileAt(e.offsetX, e.offsetY);
 
-        // Track hovered edge for fence tool or gate relocation mode
-        if (this.game.currentTool === 'fence' || this.isGateRelocateMode) {
+        // Track hovered edge for fence tool, gate relocation mode, or demolish tool
+        if (this.game.currentTool === 'fence' || this.game.currentTool === 'demolish' || this.isGateRelocateMode) {
             this.hoveredEdge = this.game.camera.getTileEdgeAt(e.offsetX, e.offsetY);
         } else {
             this.hoveredEdge = null;
@@ -1785,6 +1789,11 @@ export class InputHandler {
             this.placePathLShape(this.pathDragStart, this.hoveredTile);
         }
 
+        // Handle demolish drag end
+        if (this.isDemolishDragging && this.demolishDragStart && this.hoveredTile) {
+            this.executeDemolishRectangle(this.demolishDragStart, this.hoveredTile);
+        }
+
         if (this.isDragging) {
             this.handleDragEnd();
         }
@@ -1796,6 +1805,8 @@ export class InputHandler {
         this.fenceDragStart = null;
         this.isPathDragging = false;
         this.pathDragStart = null;
+        this.isDemolishDragging = false;
+        this.demolishDragStart = null;
     }
 
     /**
@@ -2226,7 +2237,11 @@ export class InputHandler {
                 }
                 break;
             case 'demolish':
-                this.demolish(x, y);
+                // Start demolish drag
+                if (this.hoveredTile) {
+                    this.demolishDragStart = { ...this.hoveredTile };
+                    this.isDemolishDragging = true;
+                }
                 break;
             case 'fence':
                 // Start fence drag
@@ -2443,17 +2458,320 @@ export class InputHandler {
         const tile = this.game.world.getTile(x, y);
         if (!tile) return;
 
-        // Remove path first
+        // Check if we're clicking on a fence edge
+        if (this.hoveredEdge) {
+            const edge = this.hoveredEdge.edge;
+            const fenceType = tile.fences[edge as keyof typeof tile.fences];
+
+            if (fenceType) {
+                // There's a fence here - check impact
+                const impact = this.game.checkFenceRemovalImpact(x, y, edge);
+
+                if (impact.type === 'none') {
+                    // No exhibit impact, just delete the fence
+                    this.deleteFence(x, y, edge);
+                } else if (impact.type === 'delete') {
+                    // Would delete an exhibit - show confirmation
+                    this.showFenceDeleteModal(
+                        'Delete Exhibit?',
+                        `Do you really want to delete "${impact.exhibits[0].name}"?`,
+                        () => {
+                            this.deleteFence(x, y, edge);
+                            this.game.deleteExhibitWithGateConversion(impact.exhibits[0]);
+                        }
+                    );
+                } else if (impact.type === 'merge') {
+                    // Would merge two exhibits - show confirmation
+                    const [exhibit1, exhibit2] = impact.exhibits;
+                    this.showFenceDeleteModal(
+                        'Merge Exhibits?',
+                        `Do you really want to merge "${exhibit1.name}" and "${exhibit2.name}"?`,
+                        () => {
+                            this.deleteFence(x, y, edge);
+                            this.game.mergeExhibits(exhibit1, exhibit2, { tileX: x, tileY: y, edge });
+                        }
+                    );
+                }
+                return;
+            }
+        }
+
+        // Remove path
         if (tile.path) {
             this.game.world.setPath(x, y, null);
             this.game.addMoney(10);
-        }
-        // Then terrain back to grass
-        else if (tile.terrain !== 'grass') {
-            this.game.world.setTerrain(x, y, 'grass');
+            this.game.pathfinding.updateWorld(this.game.world);
+            return;
         }
 
+        // Remove foliage at this tile
+        const foliageAtTile = this.game.getFoliageAtTile(x, y);
+        if (foliageAtTile.length > 0) {
+            // Remove the first foliage item (can click multiple times to remove all)
+            this.game.removeFoliage(foliageAtTile[0]);
+            this.game.addMoney(5);
+            return;
+        }
+
+        // Remove building/shelter at this tile
+        const placeable = this.game.getPlaceableAtTile(x, y);
+        if (placeable) {
+            // Get refund (half of cost)
+            const refund = Math.floor(placeable.config.cost / 2);
+            if (placeable.placeableType.includes('_small') || placeable.placeableType.includes('_regular') || placeable.placeableType.includes('_large')) {
+                // It's a shelter
+                this.game.removeShelter(placeable as any);
+            } else {
+                // It's a building
+                this.game.removeBuilding(placeable as any);
+            }
+            this.game.addMoney(refund);
+        }
+    }
+
+    /**
+     * Delete a fence edge
+     */
+    private deleteFence(tileX: number, tileY: number, edge: EdgeDirection): void {
+        this.game.world.setFence(tileX, tileY, edge, null);
+        this.game.removeFenceCondition(tileX, tileY, edge);
         this.game.pathfinding.updateWorld(this.game.world);
+        // Refund some money for the fence
+        this.game.addMoney(25);
+    }
+
+    /**
+     * Show fence delete confirmation modal
+     */
+    private showFenceDeleteModal(title: string, message: string, onConfirm: () => void): void {
+        const modal = document.getElementById('fence-delete-modal');
+        const titleEl = document.getElementById('fence-delete-title');
+        const messageEl = document.getElementById('fence-delete-message');
+        const confirmBtn = document.getElementById('fence-delete-confirm-btn');
+        const cancelBtn = document.getElementById('fence-delete-cancel-btn');
+        const backdrop = modal?.querySelector('.modal-backdrop');
+
+        if (!modal || !titleEl || !messageEl || !confirmBtn || !cancelBtn) return;
+
+        // Update content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Update confirm button text based on action
+        confirmBtn.textContent = title.includes('Merge') ? 'Merge' : 'Delete';
+
+        // Show modal
+        modal.classList.remove('hidden');
+
+        // Handle confirm
+        const handleConfirm = () => {
+            onConfirm();
+            this.hideFenceDeleteModal();
+            cleanup();
+        };
+
+        // Handle cancel
+        const handleCancel = () => {
+            this.hideFenceDeleteModal();
+            cleanup();
+        };
+
+        // Handle escape key
+        const handleKeydown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                handleCancel();
+            } else if (e.key === 'Enter') {
+                handleConfirm();
+            }
+        };
+
+        // Cleanup event listeners
+        const cleanup = () => {
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            backdrop?.removeEventListener('click', handleCancel);
+            document.removeEventListener('keydown', handleKeydown);
+        };
+
+        // Add event listeners
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        backdrop?.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleKeydown);
+    }
+
+    /**
+     * Hide fence delete confirmation modal
+     */
+    private hideFenceDeleteModal(): void {
+        const modal = document.getElementById('fence-delete-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Execute demolish for a rectangle selection
+     */
+    private executeDemolishRectangle(start: GridPos, end: GridPos): void {
+        const minX = Math.min(start.x, end.x);
+        const maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y);
+        const maxY = Math.max(start.y, end.y);
+
+        // Single tile click - use regular demolish with edge detection
+        if (minX === maxX && minY === maxY) {
+            this.demolish(start.x, start.y);
+            return;
+        }
+
+        // Rectangle selection - demolish paths, terrain, and internal fences
+        let deletedPaths = 0;
+        let deletedTerrain = 0;
+        let deletedFences = 0;
+        const affectedExhibits = new Set<any>();
+
+        // First pass: collect what will be deleted and check for exhibit impacts
+        const fencesToDelete: Array<{ x: number; y: number; edge: EdgeDirection }> = [];
+
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                const tile = this.game.world.getTile(x, y);
+                if (!tile) continue;
+
+                // Check fences - only delete fences where both sides are in the rectangle
+                for (const edge of ['north', 'south', 'east', 'west'] as EdgeDirection[]) {
+                    const fenceType = tile.fences[edge as keyof typeof tile.fences];
+                    if (!fenceType) continue;
+
+                    // Get the adjacent tile for this edge
+                    let adjX = x, adjY = y;
+                    if (edge === 'north') adjY = y - 1;
+                    else if (edge === 'south') adjY = y + 1;
+                    else if (edge === 'east') adjX = x + 1;
+                    else if (edge === 'west') adjX = x - 1;
+
+                    // Only delete if adjacent tile is also in rectangle (internal fence)
+                    const isInternal = adjX >= minX && adjX <= maxX && adjY >= minY && adjY <= maxY;
+                    if (isInternal) {
+                        // Check for exhibit impact
+                        const impact = this.game.checkFenceRemovalImpact(x, y, edge);
+                        if (impact.type !== 'none') {
+                            impact.exhibits.forEach(e => affectedExhibits.add(e));
+                        } else {
+                            fencesToDelete.push({ x, y, edge });
+                        }
+                    }
+                }
+            }
+        }
+
+        // If any exhibits would be affected, show confirmation
+        if (affectedExhibits.size > 0) {
+            const exhibitNames = Array.from(affectedExhibits).map((e: any) => e.name).join(', ');
+            this.showFenceDeleteModal(
+                'Delete Exhibits?',
+                `This will affect exhibits: ${exhibitNames}. Continue?`,
+                () => {
+                    // Delete everything including exhibit fences
+                    this.performRectangleDemolish(minX, maxX, minY, maxY, true);
+                }
+            );
+            return;
+        }
+
+        // No exhibit impact - proceed with deletion
+        this.performRectangleDemolish(minX, maxX, minY, maxY, false);
+    }
+
+    /**
+     * Actually perform the rectangle demolish
+     */
+    private performRectangleDemolish(minX: number, maxX: number, minY: number, maxY: number, includeExhibitFences: boolean): void {
+        let totalRefund = 0;
+
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                const tile = this.game.world.getTile(x, y);
+                if (!tile) continue;
+
+                // Delete internal fences
+                for (const edge of ['north', 'south', 'east', 'west'] as EdgeDirection[]) {
+                    const fenceType = tile.fences[edge as keyof typeof tile.fences];
+                    if (!fenceType) continue;
+
+                    // Get the adjacent tile for this edge
+                    let adjX = x, adjY = y;
+                    if (edge === 'north') adjY = y - 1;
+                    else if (edge === 'south') adjY = y + 1;
+                    else if (edge === 'east') adjX = x + 1;
+                    else if (edge === 'west') adjX = x - 1;
+
+                    // Only delete if adjacent tile is also in rectangle
+                    const isInternal = adjX >= minX && adjX <= maxX && adjY >= minY && adjY <= maxY;
+                    if (isInternal) {
+                        const impact = this.game.checkFenceRemovalImpact(x, y, edge);
+                        if (impact.type === 'none' || includeExhibitFences) {
+                            // Delete exhibits if needed
+                            if (includeExhibitFences && impact.type === 'delete') {
+                                this.game.deleteExhibitWithGateConversion(impact.exhibits[0]);
+                            } else if (includeExhibitFences && impact.type === 'merge') {
+                                this.game.mergeExhibits(impact.exhibits[0], impact.exhibits[1], { tileX: x, tileY: y, edge });
+                            }
+                            this.game.world.setFence(x, y, edge, null);
+                            this.game.removeFenceCondition(x, y, edge);
+                            totalRefund += 25;
+                        }
+                    }
+                }
+
+                // Delete path
+                if (tile.path) {
+                    this.game.world.setPath(x, y, null);
+                    totalRefund += 10;
+                }
+
+                // Delete foliage at this tile
+                const foliageAtTile = this.game.getFoliageAtTile(x, y);
+                for (const foliage of foliageAtTile) {
+                    this.game.removeFoliage(foliage);
+                    totalRefund += 5;
+                }
+
+                // Delete building/shelter at this tile (only delete once per placeable)
+                const placeable = this.game.getPlaceableAtTile(x, y);
+                if (placeable && placeable.tileX === x && placeable.tileY === y) {
+                    // Only delete if this is the origin tile to avoid double-deletion
+                    const refund = Math.floor(placeable.config.cost / 2);
+                    if (placeable.placeableType.includes('_small') || placeable.placeableType.includes('_regular') || placeable.placeableType.includes('_large')) {
+                        this.game.removeShelter(placeable as any);
+                    } else {
+                        this.game.removeBuilding(placeable as any);
+                    }
+                    totalRefund += refund;
+                }
+            }
+        }
+
+        if (totalRefund > 0) {
+            this.game.addMoney(totalRefund);
+        }
+        this.game.pathfinding.updateWorld(this.game.world);
+    }
+
+    /**
+     * Get tiles in demolish rectangle for preview
+     */
+    public getDemolishRectangle(): { minX: number; maxX: number; minY: number; maxY: number } | null {
+        if (!this.isDemolishDragging || !this.demolishDragStart || !this.hoveredTile) {
+            return null;
+        }
+        return {
+            minX: Math.min(this.demolishDragStart.x, this.hoveredTile.x),
+            maxX: Math.max(this.demolishDragStart.x, this.hoveredTile.x),
+            minY: Math.min(this.demolishDragStart.y, this.hoveredTile.y),
+            maxY: Math.max(this.demolishDragStart.y, this.hoveredTile.y),
+        };
     }
 
     /**

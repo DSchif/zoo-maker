@@ -1030,6 +1030,114 @@ export class Game {
     }
 
     /**
+     * Find exhibits that use a specific fence edge
+     */
+    getExhibitsUsingFence(tileX: number, tileY: number, edge: EdgeDirection): Exhibit[] {
+        return this.exhibits.filter(exhibit =>
+            exhibit.hasFenceEdge(tileX, tileY, edge) ||
+            exhibit.isGateAt(tileX, tileY, edge)
+        );
+    }
+
+    /**
+     * Check what happens if a fence is removed
+     * Returns: 'none' if no exhibit impact, 'delete' if exhibit opens to outside,
+     * 'merge' if two exhibits would merge (with the exhibits to merge)
+     */
+    checkFenceRemovalImpact(tileX: number, tileY: number, edge: EdgeDirection): {
+        type: 'none' | 'delete' | 'merge';
+        exhibits: Exhibit[];
+    } {
+        const affectedExhibits = this.getExhibitsUsingFence(tileX, tileY, edge);
+
+        if (affectedExhibits.length === 0) {
+            return { type: 'none', exhibits: [] };
+        }
+
+        if (affectedExhibits.length === 1) {
+            // Single exhibit - removing fence would delete it (open to outside)
+            return { type: 'delete', exhibits: affectedExhibits };
+        }
+
+        if (affectedExhibits.length === 2) {
+            // Two exhibits share this fence - removing would merge them
+            return { type: 'merge', exhibits: affectedExhibits };
+        }
+
+        // Shouldn't happen, but handle gracefully
+        return { type: 'delete', exhibits: affectedExhibits };
+    }
+
+    /**
+     * Delete an exhibit, converting its gate back to regular fence
+     */
+    deleteExhibitWithGateConversion(exhibit: Exhibit): void {
+        // Convert gate to regular fence (use the same fence type)
+        const gate = exhibit.gate;
+        if (gate && gate.fenceType) {
+            // Gate is already a fence, just remove the exhibit reference
+            // The fence stays, it's no longer a "gate"
+        }
+
+        this.removeExhibit(exhibit);
+    }
+
+    /**
+     * Merge two exhibits, keeping one gate and converting the other to regular fence
+     */
+    mergeExhibits(exhibit1: Exhibit, exhibit2: Exhibit, fenceToRemove: { tileX: number; tileY: number; edge: EdgeDirection }): Exhibit {
+        // Create merged exhibit with combined interior
+        const mergedExhibit = new Exhibit(this, `${exhibit1.name} + ${exhibit2.name}`);
+
+        // Combine interior tiles
+        const combinedInterior = [
+            ...exhibit1.interiorTiles,
+            ...exhibit2.interiorTiles,
+        ];
+
+        // Remove duplicates
+        const uniqueInterior = combinedInterior.filter((tile, index, self) =>
+            index === self.findIndex(t => t.x === tile.x && t.y === tile.y)
+        );
+        mergedExhibit.setInteriorTiles(uniqueInterior);
+
+        // Combine perimeter fences, excluding the removed fence
+        const combinedPerimeter = [
+            ...exhibit1.perimeterFences,
+            ...exhibit2.perimeterFences,
+        ].filter(f =>
+            !(f.tileX === fenceToRemove.tileX &&
+              f.tileY === fenceToRemove.tileY &&
+              f.edge === fenceToRemove.edge)
+        );
+
+        // Remove duplicates from perimeter
+        const uniquePerimeter = combinedPerimeter.filter((fence, index, self) =>
+            index === self.findIndex(f =>
+                f.tileX === fence.tileX && f.tileY === fence.tileY && f.edge === fence.edge
+            )
+        );
+        mergedExhibit.setPerimeter(uniquePerimeter);
+
+        // Keep exhibit1's gate, convert exhibit2's gate to regular fence
+        mergedExhibit.setGate(
+            exhibit1.gate.tileX,
+            exhibit1.gate.tileY,
+            exhibit1.gate.edge,
+            exhibit1.gate.fenceType
+        );
+
+        // Remove the old exhibits
+        this.removeExhibit(exhibit1);
+        this.removeExhibit(exhibit2);
+
+        // Add the merged exhibit
+        this.exhibits.push(mergedExhibit);
+
+        return mergedExhibit;
+    }
+
+    /**
      * Check if a fence edge is a gate
      */
     isGateAt(tileX: number, tileY: number, edge: string): boolean {

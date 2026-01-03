@@ -3114,6 +3114,106 @@ export class Renderer {
             return;
         }
 
+        // Handle demolish tool overlay with red highlights
+        if (tool === 'demolish') {
+            const rect = input.getDemolishRectangle();
+
+            // Rectangle drag mode
+            if (rect) {
+                // Draw light red overlay on all tiles in rectangle
+                for (let y = rect.minY; y <= rect.maxY; y++) {
+                    for (let x = rect.minX; x <= rect.maxX; x++) {
+                        const tile = this.game.world.getTile(x, y);
+                        if (!tile) continue;
+
+                        // Light red for selection area
+                        this.drawTilePreview(x, y, 0xff0000, 0.15);
+
+                        // Bright red for things that will be deleted
+                        if (tile.path) {
+                            this.drawTilePreview(x, y, 0xff0000, 0.5);
+                        }
+
+                        // Check for foliage
+                        const foliageAtTile = this.game.getFoliageAtTile(x, y);
+                        if (foliageAtTile.length > 0) {
+                            this.drawTilePreview(x, y, 0xff0000, 0.5);
+                        }
+
+                        // Check for buildings/shelters
+                        const placeable = this.game.getPlaceableAtTile(x, y);
+                        if (placeable) {
+                            this.drawTilePreview(x, y, 0xff0000, 0.5);
+                        }
+
+                        // Highlight internal fences that will be deleted
+                        for (const edge of ['north', 'south', 'east', 'west'] as const) {
+                            const fenceType = tile.fences[edge];
+                            if (!fenceType) continue;
+
+                            // Get adjacent tile
+                            let adjX = x, adjY = y;
+                            if (edge === 'north') adjY = y - 1;
+                            else if (edge === 'south') adjY = y + 1;
+                            else if (edge === 'east') adjX = x + 1;
+                            else if (edge === 'west') adjX = x - 1;
+
+                            // Only highlight if adjacent tile is also in rectangle
+                            const isInternal = adjX >= rect.minX && adjX <= rect.maxX &&
+                                               adjY >= rect.minY && adjY <= rect.maxY;
+                            if (isInternal) {
+                                this.drawEdgePreview({ tileX: x, tileY: y, edge }, 0xff0000, 0.7);
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Single tile hover mode
+            const tile = this.game.world.getTile(hoveredTile.x, hoveredTile.y);
+            if (!tile) return;
+
+            // Check for fence at hovered edge first (priority)
+            if (input.hoveredEdge) {
+                const edge = input.hoveredEdge.edge;
+                const fenceType = tile.fences[edge as keyof typeof tile.fences];
+                if (fenceType) {
+                    // Draw red highlight on the fence edge
+                    this.drawEdgePreview(input.hoveredEdge, 0xff0000, 0.7);
+                    return;
+                }
+            }
+
+            // Check for path on tile
+            if (tile.path) {
+                this.drawTilePreview(hoveredTile.x, hoveredTile.y, 0xff0000, 0.5);
+                return;
+            }
+
+            // Check for foliage
+            const foliageAtTile = this.game.getFoliageAtTile(hoveredTile.x, hoveredTile.y);
+            if (foliageAtTile.length > 0) {
+                this.drawTilePreview(hoveredTile.x, hoveredTile.y, 0xff0000, 0.5);
+                return;
+            }
+
+            // Check for buildings/shelters
+            const placeable = this.game.getPlaceableAtTile(hoveredTile.x, hoveredTile.y);
+            if (placeable) {
+                // Highlight all tiles of the placeable
+                const tiles = placeable.getOccupiedTiles();
+                for (const t of tiles) {
+                    this.drawTilePreview(t.x, t.y, 0xff0000, 0.5);
+                }
+                return;
+            }
+
+            // Nothing to demolish - show default hover
+            this.drawTilePreview(hoveredTile.x, hoveredTile.y, 0x888888, 0.3);
+            return;
+        }
+
         // Default tile highlight for other tools
         const screenPos = this.game.camera.tileToScreen(hoveredTile.x, hoveredTile.y);
 

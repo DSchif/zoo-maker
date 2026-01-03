@@ -649,6 +649,24 @@
                 </div>
             </div>
         </div>
+
+        <!-- Fence Delete Confirmation Modal -->
+        <div id="fence-delete-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-icon">⚠️</span>
+                    <h2 id="fence-delete-title">Delete Exhibit?</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="fence-delete-message">Do you really want to delete this exhibit?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="fence-delete-cancel-btn" class="modal-btn cancel">Cancel</button>
+                    <button id="fence-delete-confirm-btn" class="modal-btn confirm">Delete</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

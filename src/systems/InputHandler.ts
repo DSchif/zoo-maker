@@ -21,6 +21,138 @@ const ANIMAL_INFO: Record<string, any> = {
 };
 
 /**
+ * Building info for display
+ */
+const BUILDING_INFO: Record<string, {
+    name: string;
+    type: string;
+    icon: string;
+    description: string;
+    size: string;
+    capacity: number;
+    staffRequired: number;
+    cost: number;
+    items?: Array<{ name: string; price: number }>;
+}> = {
+    burger_stand: {
+        name: 'Burger Stand',
+        type: 'Food Vendor',
+        icon: '🍔',
+        description: 'A classic fast food stand serving burgers and fries. No staff required - fully automated!',
+        size: '2x2',
+        capacity: 5,
+        staffRequired: 0,
+        cost: 1500,
+        items: [
+            { name: 'Burger', price: 10 },
+            { name: 'Fries', price: 5 },
+        ],
+    },
+    drink_stand: {
+        name: 'Drink Stand',
+        type: 'Beverage Vendor',
+        icon: '🥤',
+        description: 'Refreshing drinks to keep your guests hydrated on hot days.',
+        size: '2x2',
+        capacity: 5,
+        staffRequired: 0,
+        cost: 1200,
+        items: [
+            { name: 'Soda', price: 5 },
+            { name: 'Water', price: 3 },
+            { name: 'Lemonade', price: 6 },
+        ],
+    },
+    vending_machine: {
+        name: 'Vending Machine',
+        type: 'Snack Vendor',
+        icon: '🎰',
+        description: 'Self-service snack machine. Compact and efficient!',
+        size: '1x1',
+        capacity: 3,
+        staffRequired: 0,
+        cost: 800,
+        items: [
+            { name: 'Soda', price: 4 },
+            { name: 'Chips', price: 3 },
+            { name: 'Candy', price: 2 },
+        ],
+    },
+    gift_shop: {
+        name: 'Gift Shop',
+        type: 'Retail Shop',
+        icon: '🎁',
+        description: 'Guests can browse and purchase souvenirs to remember their visit.',
+        size: '2x2',
+        capacity: 15,
+        staffRequired: 1,
+        cost: 3000,
+        items: [
+            { name: 'Plush Lion', price: 25 },
+            { name: 'Zoo T-Shirt', price: 20 },
+            { name: 'Keychain', price: 8 },
+            { name: 'Postcard', price: 3 },
+        ],
+    },
+    restaurant: {
+        name: 'Restaurant',
+        type: 'Dining',
+        icon: '🍽️',
+        description: 'A sit-down restaurant with varied menu options for hungry guests.',
+        size: '3x2',
+        capacity: 30,
+        staffRequired: 2,
+        cost: 5000,
+        items: [
+            { name: 'Burger Meal', price: 15 },
+            { name: 'Pizza Slice', price: 8 },
+            { name: 'Salad', price: 10 },
+            { name: 'Kids Meal', price: 10 },
+        ],
+    },
+    bathroom: {
+        name: 'Bathroom',
+        type: 'Amenity',
+        icon: '🚻',
+        description: 'Essential facilities for guest comfort. Keep your zoo clean!',
+        size: '2x2',
+        capacity: 4,
+        staffRequired: 0,
+        cost: 2000,
+    },
+    garbage_can: {
+        name: 'Trash Can',
+        type: 'Amenity',
+        icon: '🗑️',
+        description: 'Helps keep your zoo clean. Guests will dispose of trash here.',
+        size: '1x1',
+        capacity: 50,
+        staffRequired: 0,
+        cost: 50,
+    },
+    bench: {
+        name: 'Bench',
+        type: 'Seating',
+        icon: '🪑',
+        description: 'A place for tired guests to rest their feet.',
+        size: '2x1',
+        capacity: 2,
+        staffRequired: 0,
+        cost: 75,
+    },
+    picnic_table: {
+        name: 'Picnic Table',
+        type: 'Seating',
+        icon: '🏕️',
+        description: 'Guests can sit and enjoy their food outdoors.',
+        size: '2x2',
+        capacity: 4,
+        staffRequired: 0,
+        cost: 150,
+    },
+};
+
+/**
  * InputHandler manages all mouse/keyboard/touch input for the game.
  */
 export class InputHandler {
@@ -67,6 +199,9 @@ export class InputHandler {
 
     // Placeable rotation (0, 1, 2, 3 = 0°, 90°, 180°, 270°)
     public placementRotation: number = 0;
+
+    // Active building submenu tab
+    private activeBuildingTab: string = 'buildings';
 
     // Gate relocation mode
     public isGateRelocateMode: boolean = false;
@@ -477,16 +612,120 @@ export class InputHandler {
                 { id: 'concrete_regular', name: 'Regular Shelter (2x2)', cost: 900, icon: '🏘️' },
                 { id: 'concrete_large', name: 'Large Shelter (3x2)', cost: 1400, icon: '🏛️' },
             ],
-            building: [
-                { id: 'burger_stand', name: 'Burger Stand (2x2)', cost: 1500, icon: '🍔' },
+            building: [], // Handled specially with tabs
+        };
+
+        // Building tool has two tabs: Buildings and Furnishings
+        const buildingTabs = {
+            buildings: [
+                { id: 'burger_stand', name: 'Burger Stand', cost: 1500, icon: '🍔' },
+                { id: 'drink_stand', name: 'Drink Stand', cost: 1200, icon: '🥤' },
+                { id: 'vending_machine', name: 'Vending Machine', cost: 800, icon: '🎰' },
+                { id: 'gift_shop', name: 'Gift Shop', cost: 3000, icon: '🎁' },
+                { id: 'restaurant', name: 'Restaurant', cost: 5000, icon: '🍽️' },
+                { id: 'bathroom', name: 'Bathroom', cost: 2000, icon: '🚻' },
+            ],
+            furnishings: [
+                { id: 'garbage_can', name: 'Trash Can', cost: 50, icon: '🗑️' },
+                { id: 'bench', name: 'Bench', cost: 75, icon: '🪑' },
+                { id: 'picnic_table', name: 'Picnic Table', cost: 150, icon: '🏕️' },
             ],
         };
+
+        // Handle building tool specially with tabs
+        if (tool === 'building') {
+            const activeTab = this.activeBuildingTab || 'buildings';
+            const activeItems = buildingTabs[activeTab as keyof typeof buildingTabs];
+
+            let submenuHTML = `
+                <div class="submenu-tabs">
+                    <button class="submenu-tab ${activeTab === 'buildings' ? 'active' : ''}" data-tab="buildings">Buildings</button>
+                    <button class="submenu-tab ${activeTab === 'furnishings' ? 'active' : ''}" data-tab="furnishings">Furnishings</button>
+                </div>
+                <div class="submenu-items-container">
+            `;
+
+            submenuHTML += activeItems.map((item, index) => `
+                <div class="submenu-item ${index === 0 ? 'selected' : ''}" data-item="${item.id}">
+                    <span class="icon">${item.icon}</span>
+                    <div class="details">
+                        <div class="name">${item.name}</div>
+                        <div class="cost">$${item.cost}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            submenuHTML += '</div>';
+
+            // Add rotation controls
+            const rotationLabels = ['0°', '90°', '180°', '270°'];
+            submenuHTML += `
+                <div class="rotation-control">
+                    <span class="rotation-label">Rotation:</span>
+                    <div class="rotation-buttons">
+                        <button id="rotate-left" class="rotate-btn" title="Rotate Left">↺</button>
+                        <span id="rotation-value">${rotationLabels[this.placementRotation]}</span>
+                        <button id="rotate-right" class="rotate-btn" title="Rotate Right">↻</button>
+                    </div>
+                    <span class="rotation-hint">[R]</span>
+                </div>
+            `;
+
+            submenuContent.innerHTML = submenuHTML;
+
+            // Bind tab click events
+            const tabButtons = submenuContent.querySelectorAll('.submenu-tab');
+            tabButtons.forEach(tabEl => {
+                tabEl.addEventListener('click', () => {
+                    const tabId = (tabEl as HTMLElement).dataset.tab;
+                    if (tabId) {
+                        this.activeBuildingTab = tabId;
+                        this.updateSubmenu('building');
+                    }
+                });
+            });
+
+            // Bind item click events
+            const submenuItems = submenuContent.querySelectorAll('.submenu-item');
+            submenuItems.forEach(itemEl => {
+                itemEl.addEventListener('click', () => {
+                    submenuItems.forEach(el => el.classList.remove('selected'));
+                    itemEl.classList.add('selected');
+                    const itemId = (itemEl as HTMLElement).dataset.item;
+                    if (itemId) {
+                        this.game.setItem(itemId);
+                        this.showBuildingMenuInfo(itemId);
+                    }
+                });
+            });
+
+            // Bind rotation button events
+            const rotateLeftBtn = document.getElementById('rotate-left');
+            rotateLeftBtn?.addEventListener('click', () => this.rotatePlacementLeft());
+            const rotateRightBtn = document.getElementById('rotate-right');
+            rotateRightBtn?.addEventListener('click', () => this.rotatePlacementRight());
+
+            // Select first item
+            if (activeItems.length > 0) {
+                this.game.setItem(activeItems[0].id);
+                this.showBuildingMenuInfo(activeItems[0].id);
+            }
+
+            submenuPanel.classList.remove('hidden');
+            return;
+        }
 
         const items = submenus[tool];
 
         if (!items || items.length === 0) {
             submenuPanel.classList.add('hidden');
+            this.hideBuildingMenuInfo();
             return;
+        }
+
+        // Hide building info when not on building tool
+        if (tool !== 'building') {
+            this.hideBuildingMenuInfo();
         }
 
         // Build submenu HTML
@@ -737,6 +976,68 @@ export class InputHandler {
      */
     private hideFoliageInfo(): void {
         const panel = document.getElementById('foliage-info-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Show building info panel (for placement menu)
+     */
+    private showBuildingMenuInfo(buildingId: string): void {
+        const info = BUILDING_INFO[buildingId];
+        if (!info) {
+            this.hideBuildingMenuInfo();
+            return;
+        }
+
+        const panel = document.getElementById('building-info-panel');
+        if (!panel) return;
+
+        // Update panel content
+        const iconEl = document.getElementById('building-info-icon');
+        const nameEl = document.getElementById('building-info-name');
+        const typeEl = document.getElementById('building-info-type');
+        const descEl = document.getElementById('building-info-description');
+        const sizeEl = document.getElementById('building-info-size');
+        const capacityEl = document.getElementById('building-info-capacity');
+        const staffEl = document.getElementById('building-info-staff');
+        const costEl = document.getElementById('building-info-cost');
+        const itemsContainer = document.getElementById('building-info-items');
+        const itemsList = document.getElementById('building-info-items-list');
+
+        if (iconEl) iconEl.textContent = info.icon;
+        if (nameEl) nameEl.textContent = info.name;
+        if (typeEl) typeEl.textContent = info.type;
+        if (descEl) descEl.textContent = info.description;
+        if (sizeEl) sizeEl.textContent = info.size;
+        if (capacityEl) capacityEl.textContent = info.capacity.toString();
+        if (staffEl) staffEl.textContent = info.staffRequired === 0 ? 'None' : info.staffRequired.toString();
+        if (costEl) costEl.textContent = `$${info.cost}`;
+
+        // Show items if available
+        if (itemsContainer && itemsList) {
+            if (info.items && info.items.length > 0) {
+                itemsList.innerHTML = info.items.map(item => `
+                    <div class="building-item">
+                        <span class="item-name">${item.name}</span>
+                        <span class="item-price">$${item.price}</span>
+                    </div>
+                `).join('');
+                itemsContainer.classList.remove('hidden');
+            } else {
+                itemsContainer.classList.add('hidden');
+            }
+        }
+
+        panel.classList.remove('hidden');
+    }
+
+    /**
+     * Hide building info panel
+     */
+    private hideBuildingMenuInfo(): void {
+        const panel = document.getElementById('building-info-panel');
         if (panel) {
             panel.classList.add('hidden');
         }

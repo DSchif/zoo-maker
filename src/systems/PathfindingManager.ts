@@ -126,6 +126,13 @@ export class PathfindingManager {
                     blockedTiles.push({ x: tile.x, y: tile.y });
                 }
             }
+
+            // Collect blocked tiles from buildings
+            for (const building of this.game.buildings) {
+                for (const tile of building.getOccupiedTiles()) {
+                    blockedTiles.push({ x: tile.x, y: tile.y });
+                }
+            }
         }
 
         return {

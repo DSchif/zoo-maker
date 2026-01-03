@@ -224,6 +224,42 @@
             </div>
         </div>
 
+        <!-- Building Info Panel (shown when selecting building to place) -->
+        <div id="building-info-panel" class="hidden">
+            <div class="building-info-header">
+                <span id="building-info-icon"></span>
+                <div class="building-info-title">
+                    <h3 id="building-info-name"></h3>
+                    <span id="building-info-type"></span>
+                </div>
+            </div>
+            <div class="building-info-body">
+                <p id="building-info-description"></p>
+                <div class="building-info-stats">
+                    <div class="building-stat">
+                        <span class="stat-label">Size:</span>
+                        <span id="building-info-size" class="stat-value"></span>
+                    </div>
+                    <div class="building-stat">
+                        <span class="stat-label">Capacity:</span>
+                        <span id="building-info-capacity" class="stat-value"></span>
+                    </div>
+                    <div class="building-stat">
+                        <span class="stat-label">Staff Required:</span>
+                        <span id="building-info-staff" class="stat-value"></span>
+                    </div>
+                    <div class="building-stat">
+                        <span class="stat-label">Cost:</span>
+                        <span id="building-info-cost" class="stat-value"></span>
+                    </div>
+                </div>
+                <div id="building-info-items" class="building-info-items hidden">
+                    <h4>Items Sold</h4>
+                    <div id="building-info-items-list"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Info Panel -->
         <div id="info-panel" class="hidden">
             <div id="info-header">

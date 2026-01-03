@@ -233,6 +233,44 @@ body {
     color: #4aff4a;
 }
 
+/* Submenu Tabs */
+.submenu-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    background: #1a1a1a;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 4px;
+}
+
+.submenu-tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 4px;
+    color: #888;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.submenu-tab:hover {
+    background: #3a3a3a;
+    color: #aaa;
+}
+
+.submenu-tab.active {
+    background: linear-gradient(180deg, #4a7a4a 0%, #3a6a3a 100%);
+    color: white;
+}
+
+.submenu-items-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 /* Brush Size Control */
 .brush-size-control {
     display: flex;
@@ -1125,6 +1163,129 @@ body {
 .foliage-stat .stat-value {
     font-size: 12px;
     color: #fff;
+    font-weight: bold;
+}
+
+/* Building Info Panel */
+#building-info-panel {
+    position: absolute;
+    left: 290px;
+    top: 70px;
+    width: 300px;
+    background: linear-gradient(180deg, #3d3d3d 0%, #2a2a2a 100%);
+    border: 2px solid #555;
+    border-radius: 8px;
+    z-index: 100;
+    pointer-events: auto;
+    color: white;
+}
+
+#building-info-panel.hidden {
+    display: none;
+}
+
+.building-info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: linear-gradient(180deg, #4a3d16 0%, #3a2f0f 100%);
+    border-radius: 6px 6px 0 0;
+    border-bottom: 2px solid #8c7a2a;
+}
+
+.building-info-header #building-info-icon {
+    font-size: 36px;
+}
+
+.building-info-title h3 {
+    margin: 0;
+    font-size: 16px;
+    color: white;
+}
+
+.building-info-title #building-info-type {
+    font-size: 12px;
+    color: #cc8;
+    font-style: italic;
+    display: block;
+}
+
+.building-info-body {
+    padding: 15px;
+}
+
+#building-info-description {
+    font-size: 13px;
+    color: #ccc;
+    line-height: 1.4;
+    margin: 0 0 15px 0;
+}
+
+.building-info-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.building-stat {
+    display: flex;
+    justify-content: space-between;
+    background: #1a1a1a;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.building-stat .stat-label {
+    font-size: 12px;
+    color: #888;
+}
+
+.building-stat .stat-value {
+    font-size: 12px;
+    color: #fff;
+    font-weight: bold;
+}
+
+.building-info-items {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+}
+
+.building-info-items h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    color: #aaa;
+}
+
+.building-info-items.hidden {
+    display: none;
+}
+
+#building-info-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.building-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1a1a;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.building-item .item-name {
+    color: #ccc;
+}
+
+.building-item .item-price {
+    color: #4aff4a;
     font-weight: bold;
 }
 

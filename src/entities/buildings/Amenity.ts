@@ -89,3 +89,23 @@ export class GarbageCan extends Amenity {
         this.trashLevel = 0;
     }
 }
+
+/**
+ * Bench - Guests sit to rest
+ */
+export class Bench extends Amenity {
+    constructor(game: Game, tileX: number, tileY: number, rotation: number = 0) {
+        super(game, 'bench', tileX, tileY, rotation);
+        this.useDuration = 30; // Sit for 30 seconds
+    }
+}
+
+/**
+ * PicnicTable - Guests sit to eat/rest
+ */
+export class PicnicTable extends Amenity {
+    constructor(game: Game, tileX: number, tileY: number, rotation: number = 0) {
+        super(game, 'picnic_table', tileX, tileY, rotation);
+        this.useDuration = 60; // Sit for 60 seconds
+    }
+}

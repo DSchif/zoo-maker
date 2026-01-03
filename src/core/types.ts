@@ -166,9 +166,14 @@ export const ISO = {
 export type InteractionType = 'enter' | 'use' | 'queue' | 'work' | 'sit' | 'rest' | 'purchase';
 
 // How entity approaches the interaction point
-// 'inside' - entity walks onto the interaction tile (shelter entrance, restaurant)
-// 'approach' - entity stands adjacent to tile, facing the interaction point (burger stand counter, vending machine)
-export type ApproachType = 'inside' | 'approach';
+// 'direct' - entity walks directly onto the interaction tile
+// 'facing' - entity stands adjacent on the side the interaction faces (e.g., service window)
+// 'any' - entity can stand on any adjacent walkable tile (e.g., vending machine, bench)
+// 'enter' - entity approaches from facing direction, then steps inside (e.g., restaurant, gift shop)
+export type ApproachType = 'direct' | 'facing' | 'any' | 'enter';
+
+// Guest needs that interactions can satisfy
+export type GuestNeed = 'hunger' | 'thirst' | 'energy' | 'bathroom' | 'fun' | 'shopping';
 
 // Entity types that can interact
 export type InteractingEntityType = 'animal' | 'guest' | 'staff';
@@ -186,13 +191,16 @@ export interface InteractionPoint {
     entities: InteractingEntityType[];
 
     // Direction entity faces while interacting
-    facing: EdgeDirection;
+    facing?: EdgeDirection;
 
     // Optional: capacity for this point (default 1)
     capacity?: number;
 
-    // How to approach this interaction (default 'inside')
+    // How to approach this interaction (default 'direct')
     approach?: ApproachType;
+
+    // What guest needs this interaction satisfies
+    satisfies?: GuestNeed[];
 }
 
 // Placeable category
@@ -289,8 +297,8 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 75,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 },
-            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 }
+            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
+            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] }
         ]
     },
     picnic_table: {
@@ -301,10 +309,10 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 150,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 },
-            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1 },
-            { relativeX: 0, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1 },
-            { relativeX: 1, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1 }
+            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
+            { relativeX: 1, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 1, approach: 'any', satisfies: ['energy'] },
+            { relativeX: 0, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1, approach: 'any', satisfies: ['energy'] },
+            { relativeX: 1, relativeY: 1, type: 'sit', entities: ['guest'], facing: 'north', capacity: 1, approach: 'any', satisfies: ['energy'] }
         ]
     },
     garbage_can: {
@@ -315,7 +323,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 50,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'use', entities: ['guest'], facing: 'north' }
+            { relativeX: 0, relativeY: 0, type: 'use', entities: ['guest'], facing: 'north', approach: 'any' }
         ]
     },
     bathroom: {
@@ -326,7 +334,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 2000,
         interactions: [
-            { relativeX: 0, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', capacity: 4 }
+            { relativeX: 0, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', capacity: 4, approach: 'facing', satisfies: ['bathroom'] }
         ]
     },
 
@@ -339,7 +347,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'commercial',
         cost: 5000,
         interactions: [
-            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north' },
+            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', approach: 'enter', satisfies: ['shopping', 'fun'] },
             { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' }
         ]
     },
@@ -351,7 +359,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'commercial',
         cost: 8000,
         interactions: [
-            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north' },
+            { relativeX: 1, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'north', approach: 'enter', satisfies: ['hunger', 'thirst'] },
             { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'east' },
             { relativeX: 2, relativeY: 0, type: 'work', entities: ['staff'], facing: 'west' }
         ]
@@ -369,7 +377,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         interactions: [
             // Single service window on front-right wall (south face)
             // Guests approach from outside (stand adjacent) to purchase
-            { relativeX: 1, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'approach' }
+            { relativeX: 1, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'facing', satisfies: ['hunger'] }
         ],
         style: 'burger_stand'
     },
@@ -383,7 +391,8 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 1000,
         purchasePrice: 5,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'approach' }
+            // Service window on front of stand, guests approach from south
+            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 2, approach: 'facing', satisfies: ['thirst'] }
         ],
         style: 'drink_stand'
     },
@@ -397,7 +406,8 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 800,
         purchasePrice: 4,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], facing: 'south', capacity: 1, approach: 'approach' }
+            // Can approach from any side
+            { relativeX: 0, relativeY: 0, type: 'purchase', entities: ['guest'], capacity: 1, approach: 'any', satisfies: ['thirst', 'hunger'] }
         ],
         style: 'vending_machine'
     },
@@ -412,7 +422,7 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         purchasePrice: 10,
         interactions: [
             // Main entrance
-            { relativeX: 2, relativeY: 2, type: 'enter', entities: ['guest'], facing: 'south', capacity: 5 },
+            { relativeX: 2, relativeY: 2, type: 'enter', entities: ['guest'], facing: 'south', capacity: 5, approach: 'enter', satisfies: ['fun'] },
             // Staff positions
             { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' },
             { relativeX: 3, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' }

@@ -1,6 +1,6 @@
 import { Entity } from './Entity';
 import type { Game } from '../core/Game';
-import type { EntityType, GridPos, AnimalSpecies, GuestFoodCategory } from '../core/types';
+import type { EntityType, GridPos, AnimalSpecies, GuestFoodCategory, GuestNeed, InteractionPoint, EdgeDirection } from '../core/types';
 import type { Vendor, VendorItem } from './buildings/Vendor';
 import { Placeable } from './Placeable';
 
@@ -50,7 +50,7 @@ export class Guest extends Entity {
     public readonly type: EntityType = 'guest';
 
     // State
-    public state: 'entering' | 'wandering' | 'viewing' | 'seeking_food' | 'seeking_seat' | 'eating' | 'eating_walking' | 'leaving' | 'left' = 'entering';
+    public state: 'entering' | 'wandering' | 'viewing' | 'seeking_need' | 'seeking_seat' | 'eating' | 'eating_walking' | 'leaving' | 'left' = 'entering';
     protected stateTimer: number = 0;
 
     // Appearance (random colors)
@@ -69,10 +69,15 @@ export class Guest extends Entity {
     public readonly preferredFoodCategory: GuestFoodCategory;
     public readonly favoriteFoods: string[];  // 1-2 specific food item names
 
-    // Food seeking state
+    // Needs-based seeking state
+    private currentNeed: GuestNeed | null = null;
+    private targetPlaceable: Placeable | null = null;
+    private targetInteraction: (InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection }) | null = null;
+    private needSeekingFailed: Map<GuestNeed, boolean> = new Map();
+
+    // Legacy: keep targetVendor/targetItem for purchase interactions
     private targetVendor: Vendor | null = null;
     private targetItem: VendorItem | null = null;
-    private foodSeekingFailed: boolean = false;  // Prevents constant retrying
 
     // Current food being consumed (for emoji display and eating state)
     public currentFood: VendorItem | null = null;
@@ -186,9 +191,9 @@ export class Guest extends Entity {
         this.thirst = Math.max(0, this.thirst - dt * Guest.THIRST_DECAY);
         this.energy = Math.max(0, this.energy - dt * Guest.ENERGY_DECAY);
 
-        // Check if should seek food (only when wandering and not already failed)
-        if (this.state === 'wandering' && !this.foodSeekingFailed) {
-            this.checkShouldSeekFood();
+        // Check if should seek to satisfy needs (only when wandering)
+        if (this.state === 'wandering') {
+            this.checkNeeds();
         }
 
         // Calculate happiness periodically
@@ -235,27 +240,32 @@ export class Guest extends Entity {
                 }
                 break;
 
-            case 'seeking_food':
-                // Walking to food vendor
+            case 'seeking_need':
+                // Walking to interaction point to satisfy a need
                 if (!this.isMoving && this.currentPath.length === 0) {
-                    // Arrived at vendor or path failed
+                    // Arrived at destination or path failed
                     if (this.targetVendor && this.isNearVendor(this.targetVendor)) {
-                        // At the vendor - try to purchase
-                        this.purchaseFood();
+                        // At the vendor - try to purchase based on current need
+                        this.completePurchase();
+                    } else if (this.targetPlaceable && this.isNearPlaceable(this.targetPlaceable)) {
+                        // At a non-vendor interaction point
+                        this.completeInteraction();
                     } else {
-                        // Failed to reach vendor - go back to wandering
-                        this.foodSeekingFailed = true;
-                        this.targetVendor = null;
-                        this.targetItem = null;
+                        // Failed to reach target - mark need as failed
+                        if (this.currentNeed) {
+                            this.needSeekingFailed.set(this.currentNeed, true);
+                        }
+                        this.clearSeekingState();
                         this.state = 'wandering';
                         this.stateTimer = 0;
                     }
                 }
                 // Timeout: give up after 30 seconds
                 if (this.stateTimer > 30) {
-                    this.foodSeekingFailed = true;
-                    this.targetVendor = null;
-                    this.targetItem = null;
+                    if (this.currentNeed) {
+                        this.needSeekingFailed.set(this.currentNeed, true);
+                    }
+                    this.clearSeekingState();
                     this.state = 'wandering';
                     this.stateTimer = 0;
                 }
@@ -289,9 +299,9 @@ export class Guest extends Entity {
                 break;
 
             case 'eating':
-                // Sitting and eating (at a bench/table)
+                // Sitting and eating (at a bench/table) or resting
                 if (this.stateTimer >= 5 + Math.random() * 3) {
-                    // Done eating - release seat and back to wandering
+                    // Done eating/resting - release seat and back to wandering
                     if (this.targetSeat) {
                         this.targetSeat.placeable.releaseInteraction(this.id);
                         this.targetSeat = null;
@@ -299,7 +309,8 @@ export class Guest extends Entity {
                     this.currentFood = null;
                     this.state = 'wandering';
                     this.stateTimer = 0;
-                    this.foodSeekingFailed = false;
+                    // Clear all seeking failed flags - guest can try again
+                    this.needSeekingFailed.clear();
                 }
                 break;
 
@@ -310,7 +321,8 @@ export class Guest extends Entity {
                     this.currentFood = null;
                     this.state = 'wandering';
                     this.stateTimer = 0;
-                    this.foodSeekingFailed = false;
+                    // Clear all seeking failed flags - guest can try again
+                    this.needSeekingFailed.clear();
                 }
                 // Continue wandering while eating
                 if (!this.isMoving && this.currentPath.length === 0) {
@@ -520,147 +532,159 @@ export class Guest extends Entity {
     }
 
     // =========================================
-    // Food Seeking Behavior
+    // Unified Needs-Based Seeking System
     // =========================================
 
     /**
-     * Check if guest should seek food based on hunger level
+     * Check all needs and start seeking if necessary
      */
-    private checkShouldSeekFood(): void {
-        // Hunger thresholds for seeking food
-        // 70-100: Not hungry, won't seek
-        // 40-70: Mildly hungry, only seek if favorite food is very close
-        // 20-40: Hungry, actively seek food
-        // 0-20: Starving, desperately seek any food
+    private checkNeeds(): void {
+        // Priority order: thirst > hunger > energy
+        // (Thirst is slightly more urgent as it decays faster)
 
-        if (this.hunger >= 70) {
-            return;  // Not hungry
+        // Check thirst first
+        if (this.thirst < 70 && !this.needSeekingFailed.get('thirst')) {
+            if (this.trySeekNeed('thirst')) return;
         }
 
-        // Find best food option
-        const result = this.findBestFoodVendor();
-        if (!result) {
-            // No food available
-            if (this.hunger < 20) {
-                // Starving and no food - might leave
-                this.foodSeekingFailed = true;
+        // Check hunger
+        if (this.hunger < 70 && !this.needSeekingFailed.get('hunger')) {
+            if (this.trySeekNeed('hunger')) return;
+        }
+
+        // Check energy (seek benches/rest areas)
+        if (this.energy < 40 && !this.needSeekingFailed.get('energy')) {
+            if (this.trySeekNeed('energy')) return;
+        }
+    }
+
+    /**
+     * Try to start seeking an interaction that satisfies a need
+     * Returns true if successfully started seeking
+     */
+    private trySeekNeed(need: GuestNeed): boolean {
+        // Find all interactions that satisfy this need
+        const interactions = this.game.findInteractionsSatisfying(need, this.tileX, this.tileY);
+
+        if (interactions.length === 0) {
+            // No interactions available for this need
+            if (this.getNeedValue(need) < 20) {
+                // Critical need but no way to satisfy - mark as failed
+                this.needSeekingFailed.set(need, true);
             }
-            return;
+            return false;
         }
 
-        const { vendor, item, score, distance } = result;
-
-        // Decide whether to seek based on hunger level and score
+        // Determine urgency and choose whether to seek
+        const needValue = this.getNeedValue(need);
         let shouldSeek = false;
 
-        if (this.hunger < 20) {
-            // Starving - seek any food
+        if (needValue < 20) {
+            // Critical - seek immediately
             shouldSeek = true;
-        } else if (this.hunger < 40) {
-            // Hungry - seek if score is decent
-            shouldSeek = score > 20;
-        } else {
-            // Mildly hungry - only seek favorites if close
-            const hasFavorite = this.favoriteFoods.includes(item.name);
-            shouldSeek = hasFavorite && distance < 10;
+        } else if (needValue < 40) {
+            // Urgent - seek if reasonable option nearby
+            shouldSeek = interactions[0].distance < 20;
+        } else if (needValue < 70) {
+            // Mild need - only seek if very close or has favorite item
+            const closest = interactions[0];
+            shouldSeek = closest.distance < 10;
         }
 
         if (shouldSeek) {
-            this.startSeekingFood(vendor, item);
+            // Pick the best (closest) interaction
+            const best = interactions[0];
+            this.startSeekingNeed(need, best);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the current value for a need (0-100)
+     */
+    private getNeedValue(need: GuestNeed): number {
+        switch (need) {
+            case 'hunger': return this.hunger;
+            case 'thirst': return this.thirst;
+            case 'energy': return this.energy;
+            default: return 100; // Fully satisfied for untracked needs
         }
     }
 
     /**
-     * Find the best food vendor based on preferences and distance
-     * Returns null if no suitable vendor found
+     * Start seeking an interaction point to satisfy a need
      */
-    private findBestFoodVendor(): { vendor: Vendor; item: VendorItem; score: number; distance: number } | null {
-        const vendors = this.game.getFoodVendors();
-        if (vendors.length === 0) return null;
-
-        let bestResult: { vendor: Vendor; item: VendorItem; score: number; distance: number } | null = null;
-        let bestScore = -Infinity;
-
-        for (const vendor of vendors) {
-            if (!vendor.canServe()) continue;
-
-            const items = vendor.getItems();
-            for (const item of items) {
-                // Only consider food items (not drinks for hunger)
-                if (item.type === 'drink') continue;
-
-                // Calculate distance (Manhattan distance)
-                const distance = Math.abs(this.tileX - vendor.tileX) + Math.abs(this.tileY - vendor.tileY);
-
-                // Calculate score
-                let score = item.satisfaction;
-
-                // Bonus for favorite food (+50)
-                if (this.favoriteFoods.includes(item.name)) {
-                    score += 50;
-                }
-
-                // Bonus for preferred category (+25)
-                if (item.category === this.preferredFoodCategory) {
-                    score += 25;
-                }
-
-                // Distance penalty (closer is better)
-                score -= distance * 2;
-
-                // Happiness bonus from item itself
-                if (item.happinessBonus) {
-                    score += item.happinessBonus;
-                }
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestResult = { vendor, item, score, distance };
-                }
-            }
-        }
-
-        return bestResult;
-    }
-
-    /**
-     * Start walking to a food vendor
-     */
-    private async startSeekingFood(vendor: Vendor, item: VendorItem): Promise<void> {
-        this.state = 'seeking_food';
+    private async startSeekingNeed(
+        need: GuestNeed,
+        interaction: InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection; placeable: Placeable }
+    ): Promise<void> {
+        this.state = 'seeking_need';
         this.stateTimer = 0;
-        this.targetVendor = vendor;
-        this.targetItem = item;
+        this.currentNeed = need;
+        this.targetPlaceable = interaction.placeable;
+        this.targetInteraction = interaction;
         this.clearPath();
 
-        // Get the vendor's purchase interaction point
-        const purchasePoints = vendor.getInteractionPointsByType('purchase');
-        if (purchasePoints.length === 0) {
-            // Fallback if no purchase point defined
-            await this.requestPath(vendor.tileX, vendor.tileY + 1, true, false);
-            return;
-        }
-
-        const point = purchasePoints[0];
-
-        // Calculate target position based on approach type
-        let targetX = point.worldX;
-        let targetY = point.worldY;
-
-        if (point.approach === 'approach') {
-            // Stand adjacent to the interaction point, based on facing direction
-            // The facing direction is where the entity looks FROM the adjacent tile
-            // So we offset in the opposite direction
-            switch (point.worldFacing) {
-                case 'south': targetX += 1; break;  // Stand to the south (+X)
-                case 'north': targetX -= 1; break;  // Stand to the north (-X)
-                case 'west': targetY += 1; break;   // Stand to the west (+Y)
-                case 'east': targetY -= 1; break;   // Stand to the east (-Y)
+        // Check if placeable is a Vendor for purchase interactions
+        if (interaction.type === 'purchase') {
+            const vendor = interaction.placeable as unknown as Vendor;
+            if ('getItems' in vendor) {
+                this.targetVendor = vendor;
+                // Find best item that satisfies this need
+                const items = vendor.getItems();
+                const matchingItems = items.filter(item => {
+                    if (need === 'hunger') return item.type === 'food';
+                    if (need === 'thirst') return item.type === 'drink';
+                    return true;
+                });
+                if (matchingItems.length > 0) {
+                    // Pick item with best score (considering preferences)
+                    let bestItem = matchingItems[0];
+                    let bestScore = 0;
+                    for (const item of matchingItems) {
+                        let score = item.satisfaction;
+                        if (this.favoriteFoods.includes(item.name)) score += 50;
+                        if (item.category === this.preferredFoodCategory) score += 25;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestItem = item;
+                        }
+                    }
+                    this.targetItem = bestItem;
+                }
             }
         }
-        // For 'inside' or undefined, path directly to the interaction tile
 
-        await this.requestPath(targetX, targetY, true, false);
+        // Use placeable's calculateApproachTile method for consistent approach handling
+        const approachTile = interaction.placeable.calculateApproachTile(
+            interaction,
+            this.tileX,
+            this.tileY
+        );
+
+        await this.requestPath(approachTile.x, approachTile.y, true, false);
+    }
+
+    /**
+     * Clear all seeking-related state
+     */
+    private clearSeekingState(): void {
+        this.currentNeed = null;
+        this.targetPlaceable = null;
+        this.targetInteraction = null;
+        this.targetVendor = null;
+        this.targetItem = null;
+    }
+
+    /**
+     * Check if guest is near enough to a placeable
+     */
+    private isNearPlaceable(placeable: Placeable): boolean {
+        const dx = Math.abs(this.tileX - placeable.tileX);
+        const dy = Math.abs(this.tileY - placeable.tileY);
+        return dx <= placeable.width + 1 && dy <= placeable.depth + 1;
     }
 
     /**
@@ -673,19 +697,19 @@ export class Guest extends Entity {
     }
 
     /**
-     * Purchase food from the target vendor
+     * Complete a purchase interaction (food/drink vendor)
      */
-    private purchaseFood(): void {
-        if (!this.targetVendor || !this.targetItem) {
+    private completePurchase(): void {
+        if (!this.targetVendor || !this.targetItem || !this.currentNeed) {
+            this.clearSeekingState();
             this.state = 'wandering';
             this.stateTimer = 0;
             return;
         }
 
-        // Try to purchase
         const item = this.targetVendor.purchase(this.targetItem.name);
         if (item) {
-            // Success! Apply satisfaction
+            // Successful purchase!
             let satisfaction = item.satisfaction;
 
             // Bonus for favorite food
@@ -698,34 +722,42 @@ export class Guest extends Entity {
                 satisfaction += 8;
             }
 
-            // Apply hunger satisfaction
-            this.hunger = Math.min(100, this.hunger + satisfaction);
+            // Apply satisfaction to the appropriate need
+            if (this.currentNeed === 'hunger') {
+                this.hunger = Math.min(100, this.hunger + satisfaction);
+            } else if (this.currentNeed === 'thirst') {
+                this.thirst = Math.min(100, this.thirst + satisfaction);
+            }
+
+            // Small happiness boost
+            if (item.happinessBonus) {
+                this.happiness = Math.min(100, this.happiness + item.happinessBonus);
+            }
 
             // Store current food for emoji display
             this.currentFood = item;
 
-            // Handle different consumption types
+            // Reset the failed flag for this need since we succeeded
+            this.needSeekingFailed.delete(this.currentNeed);
+
+            // Handle consumption based on item type
             switch (item.consumptionType) {
                 case 'immediate':
-                    // Eat right at the vendor - quick eating
                     this.state = 'eating';
                     this.stateTimer = 0;
                     break;
 
                 case 'walking':
-                    // Eat while walking around
                     this.state = 'eating_walking';
                     this.stateTimer = 0;
                     break;
 
                 case 'sitting':
-                    // Need to find a seat
                     const seat = this.findNearestAvailableSeat();
                     if (seat) {
                         this.targetSeat = seat;
                         this.startSeekingSeat(seat);
                     } else {
-                        // No seats available - eat while walking instead
                         this.state = 'eating_walking';
                         this.stateTimer = 0;
                     }
@@ -733,14 +765,70 @@ export class Guest extends Entity {
             }
         } else {
             // Purchase failed - maybe out of stock
-            this.foodSeekingFailed = true;
+            if (this.currentNeed) {
+                this.needSeekingFailed.set(this.currentNeed, true);
+            }
             this.state = 'wandering';
             this.stateTimer = 0;
         }
 
         // Clear vendor targets (keep currentFood for display)
-        this.targetVendor = null;
-        this.targetItem = null;
+        this.clearSeekingState();
+    }
+
+    /**
+     * Complete a non-vendor interaction (bench, bathroom, etc.)
+     */
+    private completeInteraction(): void {
+        if (!this.targetPlaceable || !this.targetInteraction || !this.currentNeed) {
+            this.clearSeekingState();
+            this.state = 'wandering';
+            this.stateTimer = 0;
+            return;
+        }
+
+        const interaction = this.targetInteraction;
+        const placeable = this.targetPlaceable;
+
+        // Handle different interaction types
+        switch (interaction.type) {
+            case 'sit':
+            case 'rest':
+                // Reserve the seat
+                if ('index' in interaction && typeof interaction.index === 'number') {
+                    placeable.reserveInteraction(interaction.index, this.id, 'guest');
+                    this.targetSeat = { placeable, pointIndex: interaction.index };
+                }
+                // Resting restores energy
+                this.energy = Math.min(100, this.energy + 30);
+                this.state = 'eating';  // Reuse eating state for sitting/resting
+                this.stateTimer = 0;
+                // Reset the failed flag since we succeeded
+                this.needSeekingFailed.delete(this.currentNeed);
+                break;
+
+            case 'enter':
+                // For enter-type interactions (bathroom, attractions)
+                // Satisfy the need directly
+                if (this.currentNeed === 'bathroom') {
+                    // Bathroom doesn't have a stat, just make guest happy
+                    this.happiness = Math.min(100, this.happiness + 10);
+                } else if (this.currentNeed === 'fun') {
+                    // Attractions boost happiness
+                    this.happiness = Math.min(100, this.happiness + 20);
+                }
+                this.needSeekingFailed.delete(this.currentNeed);
+                this.state = 'wandering';
+                this.stateTimer = 0;
+                break;
+
+            default:
+                this.state = 'wandering';
+                this.stateTimer = 0;
+                break;
+        }
+
+        this.clearSeekingState();
     }
 
     /**

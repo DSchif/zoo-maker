@@ -4,7 +4,7 @@
 export { Building } from './Building';
 
 // Amenities (free services)
-export { Amenity, Bathroom, GarbageCan } from './Amenity';
+export { Amenity, Bathroom, GarbageCan, Bench, PicnicTable } from './Amenity';
 
 // Vendors (queue-based sales)
 export { Vendor, FoodStand, BurgerStand, DrinkStand, VendingMachine } from './Vendor';

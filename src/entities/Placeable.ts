@@ -6,7 +6,9 @@ import type {
     PlaceableCategory,
     InteractionPoint,
     InteractionType,
-    InteractingEntityType
+    InteractingEntityType,
+    GuestNeed,
+    ApproachType
 } from '../core/types';
 import { PLACEABLE_CONFIGS } from '../core/types';
 
@@ -192,14 +194,14 @@ export class Placeable {
     /**
      * Get all interaction points with world positions
      */
-    getInteractionPoints(): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing: EdgeDirection }> {
+    getInteractionPoints(): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection }> {
         return this.config.interactions.map(interaction => {
             const worldPos = this.transformRelativePosition(interaction.relativeX, interaction.relativeY);
             return {
                 ...interaction,
                 worldX: worldPos.x,
                 worldY: worldPos.y,
-                worldFacing: this.transformFacing(interaction.facing)
+                worldFacing: interaction.facing ? this.transformFacing(interaction.facing) : undefined
             };
         });
     }
@@ -207,7 +209,7 @@ export class Placeable {
     /**
      * Get interaction points of a specific type
      */
-    getInteractionPointsByType(type: InteractionType): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing: EdgeDirection; index: number }> {
+    getInteractionPointsByType(type: InteractionType): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection; index: number }> {
         return this.config.interactions
             .map((interaction, index) => ({ ...interaction, index }))
             .filter(interaction => interaction.type === type)
@@ -217,7 +219,7 @@ export class Placeable {
                     ...interaction,
                     worldX: worldPos.x,
                     worldY: worldPos.y,
-                    worldFacing: this.transformFacing(interaction.facing)
+                    worldFacing: interaction.facing ? this.transformFacing(interaction.facing) : undefined
                 };
             });
     }
@@ -230,7 +232,7 @@ export class Placeable {
         entityType: InteractingEntityType,
         fromX: number,
         fromY: number
-    ): { worldX: number; worldY: number; worldFacing: EdgeDirection; index: number } | null {
+    ): { worldX: number; worldY: number; worldFacing?: EdgeDirection; index: number } | null {
         const points = this.getInteractionPointsByType(type)
             .filter(p => p.entities.includes(entityType));
 
@@ -287,7 +289,7 @@ export class Placeable {
     /**
      * Get the interaction point an entity has reserved
      */
-    getEntityReservation(entityId: number): { worldX: number; worldY: number; worldFacing: EdgeDirection } | null {
+    getEntityReservation(entityId: number): { worldX: number; worldY: number; worldFacing?: EdgeDirection } | null {
         const reservation = this.reservations.find(r => r.entityId === entityId);
         if (!reservation) return null;
 
@@ -297,7 +299,7 @@ export class Placeable {
         return {
             worldX: worldPos.x,
             worldY: worldPos.y,
-            worldFacing: this.transformFacing(interaction.facing)
+            worldFacing: interaction.facing ? this.transformFacing(interaction.facing) : undefined
         };
     }
 
@@ -318,6 +320,128 @@ export class Placeable {
         return this.config.interactions
             .filter(i => i.type === type)
             .reduce((sum, i) => sum + (i.capacity || 1), 0);
+    }
+
+    /**
+     * Get interaction points that satisfy a specific guest need
+     */
+    getInteractionsSatisfying(need: GuestNeed): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection; index: number; placeable: Placeable }> {
+        return this.config.interactions
+            .map((interaction, index) => ({ ...interaction, index }))
+            .filter(interaction => interaction.satisfies?.includes(need))
+            .map(interaction => {
+                const worldPos = this.transformRelativePosition(interaction.relativeX, interaction.relativeY);
+                return {
+                    ...interaction,
+                    worldX: worldPos.x,
+                    worldY: worldPos.y,
+                    worldFacing: interaction.facing ? this.transformFacing(interaction.facing) : undefined,
+                    placeable: this
+                };
+            });
+    }
+
+    /**
+     * Calculate the approach tile for an interaction point based on its approach type
+     * Returns the tile position where the entity should stand to use this interaction
+     */
+    calculateApproachTile(
+        interaction: InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection },
+        entityX: number,
+        entityY: number
+    ): { x: number; y: number } {
+        const approach = interaction.approach || 'direct';
+        let targetX = interaction.worldX;
+        let targetY = interaction.worldY;
+
+        switch (approach) {
+            case 'facing':
+                // Stand adjacent on the side the interaction faces
+                if (interaction.worldFacing) {
+                    const offset = this.getApproachOffset(interaction.worldFacing);
+                    targetX += offset.dx;
+                    targetY += offset.dy;
+                }
+                break;
+
+            case 'any':
+                // Find nearest walkable adjacent tile
+                const adjacent = this.findNearestAdjacentTile(
+                    interaction.worldX,
+                    interaction.worldY,
+                    entityX,
+                    entityY
+                );
+                if (adjacent) {
+                    targetX = adjacent.x;
+                    targetY = adjacent.y;
+                }
+                break;
+
+            case 'enter':
+                // Same as facing - approach first, then step inside (state machine handles entry)
+                if (interaction.worldFacing) {
+                    const offset = this.getApproachOffset(interaction.worldFacing);
+                    targetX += offset.dx;
+                    targetY += offset.dy;
+                }
+                break;
+
+            case 'direct':
+            default:
+                // Walk directly onto the interaction tile
+                break;
+        }
+
+        return { x: targetX, y: targetY };
+    }
+
+    /**
+     * Get the offset for approaching from a facing direction
+     */
+    private getApproachOffset(facing: EdgeDirection): { dx: number; dy: number } {
+        switch (facing) {
+            case 'south': return { dx: 1, dy: 0 };  // Stand to the south (+X)
+            case 'north': return { dx: -1, dy: 0 }; // Stand to the north (-X)
+            case 'west': return { dx: 0, dy: 1 };   // Stand to the west (+Y)
+            case 'east': return { dx: 0, dy: -1 };  // Stand to the east (-Y)
+            default: return { dx: 0, dy: 0 };
+        }
+    }
+
+    /**
+     * Find the nearest walkable adjacent tile to an interaction point
+     */
+    private findNearestAdjacentTile(
+        targetX: number,
+        targetY: number,
+        entityX: number,
+        entityY: number
+    ): { x: number; y: number } | null {
+        const adjacents = [
+            { x: targetX + 1, y: targetY },
+            { x: targetX - 1, y: targetY },
+            { x: targetX, y: targetY + 1 },
+            { x: targetX, y: targetY - 1 },
+        ];
+
+        // Filter to walkable tiles and sort by distance
+        const walkable = adjacents
+            .filter(pos => {
+                const tile = this.game.world.getTile(pos.x, pos.y);
+                if (!tile) return false;
+                if (tile.terrain === 'water') return false;
+                // Check not blocked by another placeable
+                if (this.game.getPlaceableAtTile(pos.x, pos.y)) return false;
+                return true;
+            })
+            .sort((a, b) => {
+                const distA = Math.abs(a.x - entityX) + Math.abs(a.y - entityY);
+                const distB = Math.abs(b.x - entityX) + Math.abs(b.y - entityY);
+                return distA - distB;
+            });
+
+        return walkable[0] || null;
     }
 
     // =========================================

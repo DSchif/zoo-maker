@@ -1776,8 +1776,8 @@ export class Renderer {
             graphics.fill({ color, alpha: 0.4 });
             graphics.stroke({ color, width: 2, alpha: 0.8 });
 
-            // For 'approach' type, also show where the entity stands
-            if (point.approach === 'approach') {
+            // For 'facing' type, also show where the entity stands
+            if (point.approach === 'facing') {
                 // Calculate approach tile position
                 let approachX = point.worldX;
                 let approachY = point.worldY;
@@ -2885,6 +2885,8 @@ export class Renderer {
         // Draw based on building style
         if (config.style === 'burger_stand') {
             this.drawBurgerStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+        } else if (config.style === 'drink_stand') {
+            this.drawDrinkStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
         } else {
             // Default building style
             this.drawGenericBuilding(graphics, top, right, bottom, left, buildingHeight);
@@ -3103,6 +3105,214 @@ export class Renderer {
                 { x: x1, y: y1 - awningHeight },
             ]);
             graphics.fill(0xcc2222);
+        }
+    }
+
+    /**
+     * Draw drink stand with cyan/blue colors and cup icon
+     * Narrower stand (1x2 tiles) with service window
+     */
+    private drawDrinkStand(
+        graphics: Graphics,
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        buildingHeight: number,
+        rotation: number = 0
+    ): void {
+        // Colors - cyan/blue theme for drinks
+        const wallCyan = 0x22aacc;
+        const wallCyanDark = 0x1a8899;
+        const awningBlue = 0x3399ff;
+        const awningBlueDark = 0x2277cc;
+        const roofWhite = 0xeeeeee;
+
+        const serviceWall = rotation % 4;
+
+        // Front-left wall (darker)
+        graphics.poly([
+            { x: bottom.x, y: bottom.y },
+            { x: left.x, y: left.y },
+            { x: left.x, y: left.y - buildingHeight },
+            { x: bottom.x, y: bottom.y - buildingHeight },
+        ]);
+        graphics.fill(wallCyanDark);
+
+        // Front-right wall (brighter)
+        graphics.poly([
+            { x: right.x, y: right.y },
+            { x: bottom.x, y: bottom.y },
+            { x: bottom.x, y: bottom.y - buildingHeight },
+            { x: right.x, y: right.y - buildingHeight },
+        ]);
+        graphics.fill(wallCyan);
+
+        // Service window and awning
+        const awningExtend = 6;
+        const awningHeight = 5;
+
+        if (serviceWall === 0) {
+            // Front-right wall (south facing)
+            const wallDx = bottom.x - right.x;
+            const wallDy = bottom.y - right.y;
+
+            const t1 = 0.15;
+            const t2 = 0.55;
+            const windowTop = buildingHeight * 0.65;
+            const windowBottom = buildingHeight * 0.25;
+
+            const wx1 = right.x + wallDx * t1;
+            const wy1 = right.y + wallDy * t1;
+            const wx2 = right.x + wallDx * t2;
+            const wy2 = right.y + wallDy * t2;
+
+            // Window
+            graphics.poly([
+                { x: wx1, y: wy1 - windowBottom },
+                { x: wx2, y: wy2 - windowBottom },
+                { x: wx2, y: wy2 - windowTop },
+                { x: wx1, y: wy1 - windowTop },
+            ]);
+            graphics.fill(0x222222);
+            graphics.stroke({ color: 0x66ddff, width: 2 });
+
+            // Counter shelf
+            graphics.poly([
+                { x: wx1, y: wy1 - windowBottom },
+                { x: wx2, y: wy2 - windowBottom },
+                { x: wx2 + 3, y: wy2 - windowBottom + 2 },
+                { x: wx1 + 3, y: wy1 - windowBottom + 2 },
+            ]);
+            graphics.fill(0x666666);
+
+            // Awning
+            graphics.poly([
+                { x: right.x + awningExtend, y: right.y + awningExtend / 2 - buildingHeight + 10 },
+                { x: bottom.x, y: bottom.y - buildingHeight + 10 },
+                { x: bottom.x, y: bottom.y - buildingHeight + 10 - awningHeight },
+                { x: right.x + awningExtend, y: right.y + awningExtend / 2 - buildingHeight + 10 - awningHeight },
+            ]);
+            graphics.fill(awningBlue);
+
+            // Awning stripes (white)
+            this.drawDrinkAwningStripes(graphics,
+                { x: right.x + awningExtend, y: right.y + awningExtend / 2 - buildingHeight + 10 },
+                { x: bottom.x, y: bottom.y - buildingHeight + 10 },
+                awningHeight);
+
+        } else if (serviceWall === 1) {
+            // Front-left wall (west facing)
+            const wallDx = left.x - bottom.x;
+            const wallDy = left.y - bottom.y;
+
+            const t1 = 0.15;
+            const t2 = 0.55;
+            const windowTop = buildingHeight * 0.65;
+            const windowBottom = buildingHeight * 0.25;
+
+            const wx1 = bottom.x + wallDx * t1;
+            const wy1 = bottom.y + wallDy * t1;
+            const wx2 = bottom.x + wallDx * t2;
+            const wy2 = bottom.y + wallDy * t2;
+
+            // Window
+            graphics.poly([
+                { x: wx1, y: wy1 - windowBottom },
+                { x: wx2, y: wy2 - windowBottom },
+                { x: wx2, y: wy2 - windowTop },
+                { x: wx1, y: wy1 - windowTop },
+            ]);
+            graphics.fill(0x222222);
+            graphics.stroke({ color: 0x66ddff, width: 2 });
+
+            // Counter shelf
+            graphics.poly([
+                { x: wx1, y: wy1 - windowBottom },
+                { x: wx2, y: wy2 - windowBottom },
+                { x: wx2 - 3, y: wy2 - windowBottom + 2 },
+                { x: wx1 - 3, y: wy1 - windowBottom + 2 },
+            ]);
+            graphics.fill(0x555555);
+
+            // Awning
+            graphics.poly([
+                { x: bottom.x, y: bottom.y - buildingHeight + 10 },
+                { x: left.x - awningExtend, y: left.y + awningExtend / 2 - buildingHeight + 10 },
+                { x: left.x - awningExtend, y: left.y + awningExtend / 2 - buildingHeight + 10 - awningHeight },
+                { x: bottom.x, y: bottom.y - buildingHeight + 10 - awningHeight },
+            ]);
+            graphics.fill(awningBlueDark);
+        }
+
+        // Flat roof (white/light gray)
+        graphics.poly([
+            { x: top.x, y: top.y - buildingHeight },
+            { x: right.x, y: right.y - buildingHeight },
+            { x: bottom.x, y: bottom.y - buildingHeight },
+            { x: left.x, y: left.y - buildingHeight },
+        ]);
+        graphics.fill(roofWhite);
+
+        // Cup icon on top
+        const cupX = (top.x + bottom.x) / 2;
+        const cupY = (top.y + bottom.y) / 2 - buildingHeight - 6;
+
+        // Cup body (tall rectangle shape in isometric)
+        graphics.poly([
+            { x: cupX - 5, y: cupY + 8 },
+            { x: cupX + 5, y: cupY + 8 },
+            { x: cupX + 4, y: cupY - 4 },
+            { x: cupX - 4, y: cupY - 4 },
+        ]);
+        graphics.fill(0xffffff);
+        graphics.stroke({ color: 0x3399ff, width: 1 });
+
+        // Lid
+        graphics.ellipse(cupX, cupY - 5, 6, 3);
+        graphics.fill(0x3399ff);
+
+        // Straw
+        graphics.moveTo(cupX + 2, cupY - 5);
+        graphics.lineTo(cupX + 4, cupY - 12);
+        graphics.stroke({ color: 0xff6666, width: 2 });
+
+        // Edge highlights
+        graphics.moveTo(bottom.x, bottom.y);
+        graphics.lineTo(bottom.x, bottom.y - buildingHeight);
+        graphics.stroke({ color: 0x116677, width: 1 });
+
+        graphics.moveTo(right.x, right.y);
+        graphics.lineTo(right.x, right.y - buildingHeight);
+        graphics.stroke({ color: 0x116677, width: 1 });
+    }
+
+    /**
+     * Draw white striped awning pattern for drink stand
+     */
+    private drawDrinkAwningStripes(
+        graphics: Graphics,
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        awningHeight: number
+    ): void {
+        const stripeCount = 4;
+        for (let i = 0; i < stripeCount; i += 2) {
+            const t1 = i / stripeCount;
+            const t2 = (i + 1) / stripeCount;
+
+            const x1 = start.x + (end.x - start.x) * t1;
+            const y1 = start.y + (end.y - start.y) * t1;
+            const x2 = start.x + (end.x - start.x) * t2;
+            const y2 = start.y + (end.y - start.y) * t2;
+
+            graphics.poly([
+                { x: x1, y: y1 },
+                { x: x2, y: y2 },
+                { x: x2, y: y2 - awningHeight },
+                { x: x1, y: y1 - awningHeight },
+            ]);
+            graphics.fill(0xffffff);
         }
     }
 
@@ -3722,6 +3932,7 @@ export class Renderer {
 
     /**
      * Draw a transparent building preview for placement
+     * Uses the actual building drawing methods with transparency
      */
     private drawBuildingPreview(anchorX: number, anchorY: number, tileWidth: number, tileDepth: number, rotation: number = 0, buildingType: string): void {
         const hw = TILE_WIDTH / 2;
@@ -3733,138 +3944,29 @@ export class Renderer {
         const bottomCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1);
         const leftCorner = this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1);
 
-        const previewAlpha = 0.5;
-
         // Calculate corner positions
         const top = { x: topCorner.x, y: topCorner.y - hh };
         const right = { x: rightCorner.x + hw, y: rightCorner.y };
         const bottom = { x: bottomCorner.x, y: bottomCorner.y + hh };
         const left = { x: leftCorner.x - hw, y: leftCorner.y };
 
+        const buildingHeight = 45;
+
+        // Set transparency for preview
+        this.overlayGraphics.alpha = 0.5;
+
+        // Use the actual detailed building drawing methods
         if (buildingType === 'burger_stand') {
-            // Burger stand preview - red/orange stand with awning on service side
-            const standHeight = 35;
-            const standColor = 0xcc4422;
-            const awningColor = 0xffcc00;
-            const serviceWall = rotation % 4;
-
-            // Draw floor
-            this.overlayGraphics.poly([top, right, bottom, left]);
-            this.overlayGraphics.fill({ color: 0x666666, alpha: previewAlpha * 0.5 });
-
-            // Draw main body (walls)
-            // Back-left wall
-            this.overlayGraphics.poly([
-                left, top,
-                { x: top.x, y: top.y - standHeight },
-                { x: left.x, y: left.y - standHeight },
-            ]);
-            this.overlayGraphics.fill({ color: standColor, alpha: previewAlpha * 0.8 });
-
-            // Back-right wall
-            this.overlayGraphics.poly([
-                top, right,
-                { x: right.x, y: right.y - standHeight },
-                { x: top.x, y: top.y - standHeight },
-            ]);
-            this.overlayGraphics.fill({ color: standColor, alpha: previewAlpha * 0.6 });
-
-            // Front-right wall
-            this.overlayGraphics.poly([
-                right, bottom,
-                { x: bottom.x, y: bottom.y - standHeight },
-                { x: right.x, y: right.y - standHeight },
-            ]);
-            this.overlayGraphics.fill({ color: standColor, alpha: previewAlpha });
-
-            // Front-left wall
-            this.overlayGraphics.poly([
-                bottom, left,
-                { x: left.x, y: left.y - standHeight },
-                { x: bottom.x, y: bottom.y - standHeight },
-            ]);
-            this.overlayGraphics.fill({ color: standColor, alpha: previewAlpha });
-
-            // Awning only on service window side
-            const awningExtend = 10;
-            const awningHeight = standHeight + 10;
-
-            if (serviceWall === 0) {
-                // Front-right awning (south)
-                this.overlayGraphics.poly([
-                    { x: right.x + awningExtend, y: right.y - awningHeight + 5 },
-                    { x: bottom.x, y: bottom.y - awningHeight + 10 },
-                    { x: bottom.x, y: bottom.y - standHeight },
-                    { x: right.x + awningExtend, y: right.y - standHeight },
-                ]);
-                this.overlayGraphics.fill({ color: awningColor, alpha: previewAlpha * 0.8 });
-            } else if (serviceWall === 1) {
-                // Front-left awning (west)
-                this.overlayGraphics.poly([
-                    { x: bottom.x, y: bottom.y - awningHeight + 10 },
-                    { x: left.x - awningExtend, y: left.y - awningHeight + 5 },
-                    { x: left.x - awningExtend, y: left.y - standHeight },
-                    { x: bottom.x, y: bottom.y - standHeight },
-                ]);
-                this.overlayGraphics.fill({ color: awningColor, alpha: previewAlpha * 0.8 });
-            }
-            // Rotations 2 and 3 have window on back walls (not visible)
-
-            // Roof
-            this.overlayGraphics.poly([
-                { x: top.x, y: top.y - standHeight },
-                { x: right.x, y: right.y - standHeight },
-                { x: bottom.x, y: bottom.y - standHeight },
-                { x: left.x, y: left.y - standHeight },
-            ]);
-            this.overlayGraphics.fill({ color: 0x8b4513, alpha: previewAlpha * 0.7 });
+            this.drawBurgerStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+        } else if (buildingType === 'drink_stand') {
+            this.drawDrinkStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
         } else {
-            // Generic building preview
-            const buildingHeight = 40;
-            const buildingColor = 0x888888;
-
-            // Draw floor
-            this.overlayGraphics.poly([top, right, bottom, left]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha * 0.5 });
-
-            // Draw walls
-            this.overlayGraphics.poly([
-                left, top,
-                { x: top.x, y: top.y - buildingHeight },
-                { x: left.x, y: left.y - buildingHeight },
-            ]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha * 0.8 });
-
-            this.overlayGraphics.poly([
-                top, right,
-                { x: right.x, y: right.y - buildingHeight },
-                { x: top.x, y: top.y - buildingHeight },
-            ]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha * 0.6 });
-
-            this.overlayGraphics.poly([
-                right, bottom,
-                { x: bottom.x, y: bottom.y - buildingHeight },
-                { x: right.x, y: right.y - buildingHeight },
-            ]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha });
-
-            this.overlayGraphics.poly([
-                bottom, left,
-                { x: left.x, y: left.y - buildingHeight },
-                { x: bottom.x, y: bottom.y - buildingHeight },
-            ]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha });
-
-            // Roof
-            this.overlayGraphics.poly([
-                { x: top.x, y: top.y - buildingHeight },
-                { x: right.x, y: right.y - buildingHeight },
-                { x: bottom.x, y: bottom.y - buildingHeight },
-                { x: left.x, y: left.y - buildingHeight },
-            ]);
-            this.overlayGraphics.fill({ color: buildingColor, alpha: previewAlpha * 0.7 });
+            // Generic building preview for other types
+            this.drawGenericBuilding(this.overlayGraphics, top, right, bottom, left, buildingHeight);
         }
+
+        // Restore alpha
+        this.overlayGraphics.alpha = 1.0;
     }
 
     /**

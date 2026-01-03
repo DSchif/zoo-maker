@@ -1,8 +1,8 @@
 import { Application } from 'pixi.js';
 import { Camera } from './Camera';
 import { World } from './World';
-import { GameConfig, DEFAULT_CONFIG, GameSpeed, ToolType, AnimalSpecies, FoliageType, FoodType, Gender, FenceCondition, EdgeDirection, ShelterType, ShelterSize, PLACEABLE_CONFIGS } from './types';
-import { Building, Vendor, BurgerStand, DrinkStand, VendingMachine, Bathroom, GarbageCan, GiftShop, Restaurant, IndoorAttraction } from '../entities/buildings';
+import { GameConfig, DEFAULT_CONFIG, GameSpeed, ToolType, AnimalSpecies, FoliageType, FoodType, Gender, FenceCondition, EdgeDirection, ShelterType, ShelterSize, PLACEABLE_CONFIGS, GuestNeed, InteractionPoint } from './types';
+import { Building, Vendor, BurgerStand, DrinkStand, VendingMachine, Bathroom, GarbageCan, Bench, PicnicTable, GiftShop, Restaurant, IndoorAttraction } from '../entities/buildings';
 import { PathfindingManager } from '../systems/PathfindingManager';
 import { Renderer } from '../systems/Renderer';
 import { InputHandler } from '../systems/InputHandler';
@@ -905,6 +905,32 @@ export class Game {
         return [...this.shelters, ...this.buildings];
     }
 
+    /**
+     * Find all interaction points that satisfy a specific guest need
+     * Returns interactions sorted by distance from the given position
+     */
+    findInteractionsSatisfying(
+        need: GuestNeed,
+        fromX: number,
+        fromY: number
+    ): Array<InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection; index: number; placeable: Placeable; distance: number }> {
+        const results: Array<InteractionPoint & { worldX: number; worldY: number; worldFacing?: EdgeDirection; index: number; placeable: Placeable; distance: number }> = [];
+
+        // Check all placeables for interactions that satisfy this need
+        for (const placeable of this.getAllPlaceables()) {
+            const interactions = placeable.getInteractionsSatisfying(need);
+            for (const interaction of interactions) {
+                const distance = Math.abs(interaction.worldX - fromX) + Math.abs(interaction.worldY - fromY);
+                results.push({ ...interaction, distance });
+            }
+        }
+
+        // Sort by distance
+        results.sort((a, b) => a.distance - b.distance);
+
+        return results;
+    }
+
     // =============================================
     // Building Methods
     // =============================================
@@ -941,6 +967,12 @@ export class Game {
                 break;
             case 'garbage_can':
                 building = new GarbageCan(this, tileX, tileY, rotation);
+                break;
+            case 'bench':
+                building = new Bench(this, tileX, tileY, rotation);
+                break;
+            case 'picnic_table':
+                building = new PicnicTable(this, tileX, tileY, rotation);
                 break;
             case 'gift_shop':
                 building = new GiftShop(this, tileX, tileY, rotation);

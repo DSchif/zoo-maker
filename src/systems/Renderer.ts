@@ -78,6 +78,11 @@ export class Renderer {
     private activeGridTextCount: number = 0;
     private gridTextStyle: TextStyle;
 
+    // Task emoji indicators above staff
+    private taskEmojiPool: Text[] = [];
+    private activeTaskEmojiCount: number = 0;
+    private taskEmojiStyle: TextStyle;
+
     constructor(game: Game) {
         this.game = game;
 
@@ -122,6 +127,12 @@ export class Renderer {
             fontSize: 10,
             fill: 0xffffff,
             stroke: { color: 0x000000, width: 2 },
+            align: 'center',
+        });
+
+        this.taskEmojiStyle = new TextStyle({
+            fontFamily: 'Arial, sans-serif',
+            fontSize: 16,
             align: 'center',
         });
 
@@ -1467,12 +1478,47 @@ export class Renderer {
     }
 
     /**
+     * Get a task emoji text from the pool or create a new one
+     */
+    private getPooledTaskEmoji(emoji: string, x: number, y: number, depth: number): Text {
+        let text: Text;
+
+        if (this.activeTaskEmojiCount < this.taskEmojiPool.length) {
+            text = this.taskEmojiPool[this.activeTaskEmojiCount];
+            text.text = emoji;
+            text.visible = true;
+        } else {
+            text = new Text({ text: emoji, style: this.taskEmojiStyle });
+            text.anchor.set(0.5, 1);
+            this.taskEmojiPool.push(text);
+            this.entityContainer.addChild(text);
+        }
+
+        text.x = x;
+        text.y = y;
+        text.zIndex = depth + 1; // Slightly above the staff
+        this.activeTaskEmojiCount++;
+        return text;
+    }
+
+    /**
+     * Reset task emoji pool for next frame
+     */
+    private resetTaskEmojiPool(): void {
+        for (let i = this.activeTaskEmojiCount; i < this.taskEmojiPool.length; i++) {
+            this.taskEmojiPool[i].visible = false;
+        }
+        this.activeTaskEmojiCount = 0;
+    }
+
+    /**
      * Render entities (depth-sorted)
      */
     private renderEntities(): void {
         // Reset pools
         this.resetSpritePool();
         this.resetGraphicsPool();
+        this.resetTaskEmojiPool();
         this.entityGraphics.clear();
         this.entityGraphics.visible = false; // Hide the old shared graphics
 
@@ -1883,6 +1929,22 @@ export class Renderer {
         // Flip based on facing direction
         const facing = staff.facingX || 1;
         sprite.scale.x = Math.abs(sprite.scale.x) * facing;
+
+        // Show task emoji above staff when working
+        if (staff.state === 'working') {
+            const task = staff.getCurrentTask?.();
+            if (task) {
+                const taskEmojis: Record<string, string> = {
+                    'feed_animals': '🍖',
+                    'clean_poop': '🧹',
+                    'repair_fence': '🔧',
+                    'clean_trash': '🧹',
+                    'empty_garbage': '🗑️',
+                };
+                const emoji = taskEmojis[task.type] || '⚙️';
+                this.getPooledTaskEmoji(emoji, x, y - 35, depth);
+            }
+        }
     }
 
     /**

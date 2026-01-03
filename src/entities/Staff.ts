@@ -1,17 +1,8 @@
 import { Entity } from './Entity';
 import type { Game } from '../core/Game';
 import type { EntityType, StaffType, GridPos } from '../core/types';
-
-/**
- * Task interface for staff actions
- */
-export interface StaffTask {
-    type: string;
-    exhibit?: any;
-    targetTile?: GridPos;
-    foodType?: string;
-    priority?: number;
-}
+import type { Task, TaskType } from '../systems/TaskManager';
+import { TASK_STAFF_TYPE, DEFAULT_ENABLED_TASKS } from '../systems/TaskManager';
 
 /**
  * Base Staff class - handles staff behavior and pathfinding
@@ -27,25 +18,30 @@ export abstract class Staff extends Entity {
     public state: 'idle' | 'walking' | 'working' | 'wandering' = 'idle';
     protected stateTimer: number = 0;
 
-    // Task management
-    protected currentTask: StaffTask | null = null;
-    protected taskQueue: StaffTask[] = [];
+    // Task management (uses central TaskManager)
+    protected currentTask: Task | null = null;
     protected taskTimer: number = 0;
     protected workDuration: number = 3; // Seconds to complete a task
 
-    // Assigned exhibits
+    // Assigned exhibits (by ID)
+    public assignedExhibitIds: Set<number> = new Set();
+
+    // Enabled task types (what this worker will do)
+    public enabledTaskTypes: Set<TaskType> = new Set();
+
+    // Legacy: for UI compatibility
     public assignedExhibits: any[] = [];
 
-    // Failed exhibits (for pathfinding failures)
-    public failedExhibits: Map<number, string> = new Map();
+    // Failed locations (for pathfinding failures) - cleared periodically
+    public failedLocations: Map<string, number> = new Map(); // key -> timestamp
 
     // Work check interval
     protected workCheckTimer: number = 0;
-    protected workCheckInterval: number = 8; // Check for tasks every 8 seconds
+    protected workCheckInterval: number = 2; // Check for tasks every 2 seconds (faster now)
 
     // Wandering
     protected wanderTimer: number = 0;
-    protected wanderInterval: number = 3; // Seconds between wander moves
+    protected wanderInterval: number = 5; // Seconds between wander moves
 
     constructor(game: Game, tileX: number, tileY: number, name: string) {
         super(game, tileX, tileY);
@@ -55,17 +51,22 @@ export abstract class Staff extends Entity {
     }
 
     /**
+     * Initialize enabled task types based on staff type
+     * Called after construction when staffType is available
+     */
+    protected initializeEnabledTasks(): void {
+        const defaults = DEFAULT_ENABLED_TASKS[this.staffType] || [];
+        this.enabledTaskTypes = new Set(defaults);
+    }
+
+    /**
      * Update staff
      */
     update(dt: number): void {
         this.updateTask(dt);
         this.updateMovement(dt);
+        this.cleanupFailedLocations();
     }
-
-    /**
-     * Check for work to do (override in subclasses)
-     */
-    protected abstract checkForWork(): void;
 
     /**
      * Update current task and state
@@ -87,16 +88,14 @@ export abstract class Staff extends Entity {
                 return;
             }
 
-            // If stuck (no path and not moving), try to repath or fail
+            // If stuck (no path and not moving), fail the task
             if (!this.isMoving && this.currentPath.length === 0) {
                 const target = this.currentTask.targetTile;
                 if (target && !this.isAtTaskLocation()) {
-                    // Try to find path again
+                    // Try to find path again once
                     this.requestPath(target.x, target.y, true, true).then(success => {
                         if (!success) {
-                            this.markTaskFailed('Cannot reach destination');
-                            this.currentTask = null;
-                            this.state = 'idle';
+                            this.failCurrentTask('Cannot reach destination');
                         }
                     });
                 }
@@ -104,16 +103,16 @@ export abstract class Staff extends Entity {
             return;
         }
 
-        // Check for new tasks periodically
+        // Check for new tasks frequently (no need to return to path first)
         this.workCheckTimer += dt;
         if (this.workCheckTimer >= this.workCheckInterval) {
             this.workCheckTimer = 0;
             if (!this.currentTask) {
-                this.checkForWork();
+                this.tryClaimTask();
             }
         }
 
-        // If idle and no task, wander
+        // If idle and no task for a while, wander
         if (this.state === 'idle' && !this.currentTask) {
             this.wanderTimer += dt;
             if (this.wanderTimer >= this.wanderInterval) {
@@ -125,6 +124,54 @@ export abstract class Staff extends Entity {
         // If wandering and finished path, go back to idle
         if (this.state === 'wandering' && !this.isMoving && this.currentPath.length === 0) {
             this.state = 'idle';
+        }
+    }
+
+    /**
+     * Try to claim a task from the TaskManager
+     */
+    protected tryClaimTask(): void {
+        const taskManager = this.game.taskManager;
+        if (!taskManager) return;
+
+        const task = taskManager.claimTask(
+            this.id,
+            this.staffType,
+            this.assignedExhibitIds,
+            this.enabledTaskTypes,
+            this.tileX,
+            this.tileY
+        );
+
+        if (task) {
+            this.startTask(task);
+        }
+    }
+
+    /**
+     * Start working on a claimed task
+     */
+    protected async startTask(task: Task): Promise<void> {
+        this.currentTask = task;
+
+        // Check if already at location
+        if (this.tileX === task.targetTile.x && this.tileY === task.targetTile.y) {
+            this.startWorking();
+            return;
+        }
+
+        // Path to task location
+        const success = await this.requestPath(
+            task.targetTile.x,
+            task.targetTile.y,
+            true, // Staff can use paths
+            true  // Staff can pass gates
+        );
+
+        if (success) {
+            this.state = 'walking';
+        } else {
+            this.failCurrentTask('Cannot reach task location');
         }
     }
 
@@ -148,68 +195,130 @@ export abstract class Staff extends Entity {
     }
 
     /**
-     * Perform the task (override in subclass)
+     * Perform the task (override in subclass for task-specific behavior)
      */
     protected abstract performTask(): void;
 
     /**
-     * Mark current task as failed
+     * Complete current task successfully
      */
-    protected markTaskFailed(reason: string): void {
-        if (this.currentTask?.exhibit) {
-            this.failedExhibits.set(this.currentTask.exhibit.id, reason);
-        }
-    }
-
-    /**
-     * Start a task
-     */
-    protected async startTask(task: StaffTask): Promise<boolean> {
-        if (!task.targetTile) return false;
-
-        // Check if already at location
-        if (this.tileX === task.targetTile.x && this.tileY === task.targetTile.y) {
-            this.currentTask = task;
-            this.startWorking();
-            return true;
-        }
-
-        const success = await this.requestPath(
-            task.targetTile.x,
-            task.targetTile.y,
-            true, // Staff can use paths
-            true  // Staff can pass gates
-        );
-
-        if (success) {
-            this.currentTask = task;
-            this.state = 'walking';
-            // Clear any previous failure for this exhibit
-            if (task.exhibit) {
-                this.failedExhibits.delete(task.exhibit.id);
-            }
-            return true;
-        } else {
-            // Mark exhibit as failed for pathfinding
-            if (task.exhibit) {
-                this.failedExhibits.set(task.exhibit.id, 'Cannot reach exhibit');
-            }
-            return false;
-        }
-    }
-
-    /**
-     * Complete current task
-     */
-    protected completeTask(): void {
-        if (this.currentTask?.exhibit) {
-            this.failedExhibits.delete(this.currentTask.exhibit.id);
+    protected completeCurrentTask(): void {
+        if (this.currentTask) {
+            this.game.taskManager?.completeTask(this.currentTask.id);
         }
         this.currentTask = null;
         this.state = 'idle';
         this.taskTimer = 0;
         this.wanderTimer = 0;
+
+        // Immediately check for next task
+        this.workCheckTimer = this.workCheckInterval;
     }
+
+    /**
+     * Fail current task - returns to queue for retry
+     */
+    protected failCurrentTask(reason: string): void {
+        if (this.currentTask) {
+            // Mark location as failed temporarily
+            const key = `${this.currentTask.targetTile.x},${this.currentTask.targetTile.y}`;
+            this.failedLocations.set(key, Date.now());
+
+            this.game.taskManager?.failTask(this.currentTask.id);
+        }
+        this.currentTask = null;
+        this.state = 'idle';
+        this.taskTimer = 0;
+    }
+
+    /**
+     * Clean up old failed location entries
+     */
+    private cleanupFailedLocations(): void {
+        const now = Date.now();
+        const timeout = 30000; // 30 seconds
+
+        for (const [key, timestamp] of this.failedLocations.entries()) {
+            if (now - timestamp > timeout) {
+                this.failedLocations.delete(key);
+            }
+        }
+    }
+
+    // =========================================
+    // Exhibit Assignment
+    // =========================================
+
+    /**
+     * Assign an exhibit to this staff member
+     */
+    assignExhibit(exhibit: any): void {
+        if (exhibit?.id !== undefined) {
+            this.assignedExhibitIds.add(exhibit.id);
+
+            // Legacy compatibility
+            if (!this.assignedExhibits.includes(exhibit)) {
+                this.assignedExhibits.push(exhibit);
+            }
+        }
+    }
+
+    /**
+     * Unassign an exhibit
+     */
+    unassignExhibit(exhibit: any): void {
+        if (exhibit?.id !== undefined) {
+            this.assignedExhibitIds.delete(exhibit.id);
+
+            // Legacy compatibility
+            const index = this.assignedExhibits.indexOf(exhibit);
+            if (index !== -1) {
+                this.assignedExhibits.splice(index, 1);
+            }
+        }
+    }
+
+    // =========================================
+    // Task Type Toggles
+    // =========================================
+
+    /**
+     * Enable a task type
+     */
+    enableTaskType(type: TaskType): void {
+        if (TASK_STAFF_TYPE[type] === this.staffType) {
+            this.enabledTaskTypes.add(type);
+        }
+    }
+
+    /**
+     * Disable a task type
+     */
+    disableTaskType(type: TaskType): void {
+        this.enabledTaskTypes.delete(type);
+    }
+
+    /**
+     * Toggle a task type
+     */
+    toggleTaskType(type: TaskType): void {
+        if (this.enabledTaskTypes.has(type)) {
+            this.enabledTaskTypes.delete(type);
+        } else if (TASK_STAFF_TYPE[type] === this.staffType) {
+            this.enabledTaskTypes.add(type);
+        }
+    }
+
+    /**
+     * Check if task type is enabled
+     */
+    isTaskTypeEnabled(type: TaskType): boolean {
+        return this.enabledTaskTypes.has(type);
+    }
+
+    // =========================================
+    // Wandering (unchanged)
+    // =========================================
 
     /**
      * Find nearby path tiles for wandering
@@ -252,7 +361,6 @@ export abstract class Staff extends Entity {
                     return;
                 }
             }
-            // Can't reach any path, just stay idle
             this.state = 'idle';
             return;
         }
@@ -261,7 +369,6 @@ export abstract class Staff extends Entity {
         const pathTiles = this.findNearbyPathTiles(5);
 
         if (pathTiles.length > 0) {
-            // Pick a random path tile
             const target = pathTiles[Math.floor(Math.random() * pathTiles.length)];
             const success = await this.requestPath(target.x, target.y, true, true);
             if (success) {
@@ -270,7 +377,7 @@ export abstract class Staff extends Entity {
             }
         }
 
-        // No other path tiles reachable - try adjacent path tiles
+        // Try adjacent path tiles
         const directions = [
             { dx: 1, dy: 0 },
             { dx: -1, dy: 0 },
@@ -278,7 +385,6 @@ export abstract class Staff extends Entity {
             { dx: 0, dy: -1 },
         ];
 
-        // Shuffle
         for (let i = directions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [directions[i], directions[j]] = [directions[j], directions[i]];
@@ -289,7 +395,6 @@ export abstract class Staff extends Entity {
             const targetY = this.tileY + dir.dy;
             const tile = this.game.world.getTile(targetX, targetY);
 
-            // Only move to path tiles when wandering
             if (tile?.path &&
                 !this.isMovementBlocked(this.tileX, this.tileY, targetX, targetY)) {
                 this.targetTileX = targetX;
@@ -300,7 +405,6 @@ export abstract class Staff extends Entity {
             }
         }
 
-        // Can't move anywhere on paths
         this.state = 'idle';
     }
 
@@ -311,7 +415,6 @@ export abstract class Staff extends Entity {
         let nearestPath: GridPos | null = null;
         let nearestDist = Infinity;
 
-        // Search in expanding squares
         for (let radius = 1; radius <= 10; radius++) {
             for (let dx = -radius; dx <= radius; dx++) {
                 for (let dy = -radius; dy <= radius; dy++) {
@@ -331,7 +434,6 @@ export abstract class Staff extends Entity {
                 }
             }
 
-            // If we found a path at this radius, return it
             if (nearestPath) return nearestPath;
         }
 
@@ -339,7 +441,7 @@ export abstract class Staff extends Entity {
     }
 
     /**
-     * Check if staff can walk on tile (can use paths and terrain)
+     * Check if staff can walk on tile
      */
     protected canWalkOn(tileX: number, tileY: number): boolean {
         const tile = this.game.world.getTile(tileX, tileY);
@@ -348,26 +450,9 @@ export abstract class Staff extends Entity {
         return true;
     }
 
-    /**
-     * Assign an exhibit to this staff member
-     */
-    assignExhibit(exhibit: any): void {
-        if (!this.assignedExhibits.includes(exhibit)) {
-            this.assignedExhibits.push(exhibit);
-            this.failedExhibits.delete(exhibit.id);
-        }
-    }
-
-    /**
-     * Unassign an exhibit
-     */
-    unassignExhibit(exhibit: any): void {
-        const index = this.assignedExhibits.indexOf(exhibit);
-        if (index !== -1) {
-            this.assignedExhibits.splice(index, 1);
-            this.failedExhibits.delete(exhibit.id);
-        }
-    }
+    // =========================================
+    // Utility
+    // =========================================
 
     /**
      * Set name
@@ -383,10 +468,25 @@ export abstract class Staff extends Entity {
         if (!this.currentTask) return null;
 
         switch (this.currentTask.type) {
-            case 'feed':
-                return `Feeding ${this.currentTask.exhibit?.name || 'animals'}`;
+            case 'feed_animals':
+                return 'Feeding animals';
+            case 'clean_poop':
+                return 'Cleaning';
+            case 'repair_fence':
+                return 'Repairing fence';
+            case 'clean_trash':
+                return 'Cleaning trash';
+            case 'empty_garbage':
+                return 'Emptying garbage';
             default:
                 return 'Working';
         }
+    }
+
+    /**
+     * Get current task (for UI)
+     */
+    getCurrentTask(): Task | null {
+        return this.currentTask;
     }
 }

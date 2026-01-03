@@ -1,7 +1,7 @@
 // Entity exports
 export { Entity } from './Entity';
 export { Animal, type AnimalConfig } from './Animal';
-export { Staff, type StaffTask } from './Staff';
+export { Staff } from './Staff';
 export { Guest } from './Guest';
 export { Exhibit, checkForEnclosure } from './Exhibit';
 export { Foliage, FoliageTypes } from './Foliage';

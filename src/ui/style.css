@@ -521,6 +521,195 @@ body {
     font-size: 14px;
 }
 
+/* Tasks button */
+#tasks-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#tasks-btn:hover {
+    background: linear-gradient(180deg, #5a5a5a 0%, #4a4a4a 100%);
+}
+
+#tasks-btn #tasks-count {
+    background: #666;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    min-width: 18px;
+    text-align: center;
+}
+
+#tasks-btn.has-tasks #tasks-count {
+    background: #4a7c23;
+}
+
+/* Task List Panel */
+#task-list-panel {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    width: 380px;
+    max-height: 500px;
+    background: linear-gradient(180deg, #3d3d3d 0%, #2a2a2a 100%);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid #555;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+#task-list-panel.hidden {
+    display: none;
+}
+
+.task-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: linear-gradient(180deg, #2d5016 0%, #1e3a0f 100%);
+    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid #4a7c23;
+}
+
+.task-list-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.task-list-stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px 15px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #444;
+}
+
+.task-stat {
+    font-size: 13px;
+    color: #aaa;
+}
+
+.task-stat strong {
+    color: #fff;
+}
+
+.task-list-body {
+    padding: 10px 15px;
+    overflow-y: auto;
+    max-height: 380px;
+}
+
+.task-list-section {
+    margin-bottom: 15px;
+}
+
+.task-list-section:last-child {
+    margin-bottom: 0;
+}
+
+.task-list-section h4 {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tasks-container {
+    background: #1a1a1a;
+    border-radius: 5px;
+    border: 1px solid #444;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.tasks-container:empty::after {
+    content: 'No tasks';
+    display: block;
+    padding: 12px;
+    color: #666;
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #333;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-item-icon {
+    font-size: 16px;
+    width: 24px;
+    text-align: center;
+}
+
+.task-item-info {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.task-item-type {
+    font-size: 13px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-item-location {
+    font-size: 11px;
+    color: #888;
+}
+
+.task-item-priority {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.task-item-priority.urgent {
+    background: #dc2626;
+    color: #fff;
+}
+
+.task-item-priority.normal {
+    background: #ca8a04;
+    color: #fff;
+}
+
+.task-item-priority.low {
+    background: #4b5563;
+    color: #fff;
+}
+
+.task-item-worker {
+    font-size: 11px;
+    color: #4ade80;
+    white-space: nowrap;
+}
+
 /* Stat bars */
 .info-stat {
     margin-bottom: 12px;
@@ -1786,6 +1975,45 @@ body {
     color: #666;
     font-style: italic;
     font-size: 12px;
+}
+
+/* Task toggles */
+.task-toggles-list {
+    background: #1a1a1a;
+    border-radius: 5px;
+    border: 1px solid #444;
+    padding: 8px;
+}
+
+.task-toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-radius: 4px;
+}
+
+.task-toggle-item:hover {
+    background: #2a2a2a;
+}
+
+.task-toggle-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #4ade80;
+}
+
+.task-toggle-item .task-label {
+    font-size: 13px;
+    color: #fff;
+    flex-grow: 1;
+}
+
+.task-toggle-item .task-label.disabled {
+    color: #666;
 }
 
 .exhibit-assign-item {

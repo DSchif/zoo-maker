@@ -6,6 +6,7 @@ import { Building, Vendor, BurgerStand, DrinkStand, VendingMachine, Bathroom, Ga
 import { PathfindingManager } from '../systems/PathfindingManager';
 import { Renderer } from '../systems/Renderer';
 import { InputHandler } from '../systems/InputHandler';
+import { TaskManager, Priority } from '../systems/TaskManager';
 
 // Entity imports
 import { Animal } from '../entities/Animal';
@@ -39,6 +40,7 @@ export class Game {
     public pathfinding: PathfindingManager;
     public renderer!: Renderer;
     public input!: InputHandler;
+    public taskManager: TaskManager;
 
     // Game state
     public money: number;
@@ -66,6 +68,10 @@ export class Game {
     private readonly guestSpawnRate: number = 3; // seconds between guests
     public entranceFee: number = 20;
     private readonly maxGuests: number = 50;
+
+    // Task generation
+    private taskGenerationTimer: number = 0;
+    private readonly taskGenerationInterval: number = 3; // Check for new tasks every 3 seconds
 
     // Zoo stats
     public zooName: string = 'My Zoo';
@@ -130,6 +136,7 @@ export class Game {
         this.camera = new Camera(window.innerWidth, window.innerHeight);
         this.world = new World(this.config);
         this.pathfinding = new PathfindingManager();
+        this.taskManager = new TaskManager();
 
         // Game state
         this.money = this.config.startingMoney;
@@ -234,6 +241,9 @@ export class Game {
         // Spawn guests
         this.updateGuestSpawning(dt);
 
+        // Generate tasks for staff
+        this.updateTaskGeneration(dt);
+
         // Update all animals
         for (const animal of this.animals) {
             animal.update(dt);
@@ -275,6 +285,206 @@ export class Game {
                 this.totalVisitors++;
             }
         }
+    }
+
+    /**
+     * Generate tasks for staff based on game state
+     */
+    private updateTaskGeneration(dt: number): void {
+        this.taskGenerationTimer += dt;
+        if (this.taskGenerationTimer < this.taskGenerationInterval) return;
+        this.taskGenerationTimer = 0;
+
+        // Generate feeding tasks for exhibits with hungry animals
+        this.generateFeedingTasks();
+
+        // Generate fence repair tasks
+        this.generateFenceRepairTasks();
+    }
+
+    /**
+     * Generate feeding tasks for hungry animals
+     */
+    private generateFeedingTasks(): void {
+        for (const exhibit of this.exhibits) {
+            const animals = this.getAnimalsInExhibit(exhibit);
+            if (animals.length === 0) continue;
+
+            // Check if any animal is hungry (below 50%)
+            const hungryAnimals = animals.filter(a => a.hunger < 50);
+            if (hungryAnimals.length === 0) continue;
+
+            // Check if there's already enough food in the exhibit
+            const existingFood = this.getFoodPilesInExhibit(exhibit);
+            const totalFood = existingFood.reduce((sum, pile) => sum + pile.amount, 0);
+
+            // If there's plenty of food already (100 per animal), skip
+            if (totalFood >= animals.length * 100) continue;
+
+            // Find a spot to place food
+            const feedSpot = this.findFoodPlacementSpot(exhibit);
+            if (!feedSpot) continue;
+
+            // Determine food type from animals
+            let foodType: FoodType = 'meat';
+            for (const animal of animals) {
+                if (animal.preferredFood && animal.preferredFood.length > 0) {
+                    foodType = animal.preferredFood[0] as FoodType;
+                    break;
+                }
+            }
+
+            // Check if task already exists
+            if (this.taskManager.hasTaskFor('feed_animals', exhibit.id, { animalId: animals[0].id })) {
+                continue;
+            }
+
+            // Determine priority based on hunger level
+            const lowestHunger = Math.min(...animals.map(a => a.hunger));
+            let priority: number = Priority.NORMAL;
+            if (lowestHunger < 20) {
+                priority = Priority.URGENT;
+            } else if (lowestHunger > 40) {
+                priority = Priority.LOW;
+            }
+
+            // Add the task
+            this.taskManager.addTask({
+                type: 'feed_animals',
+                priority,
+                targetTile: feedSpot,
+                exhibitId: exhibit.id,
+                data: {
+                    foodType,
+                    animalId: animals[0].id,
+                },
+                maxRetries: 3,
+            });
+        }
+    }
+
+    /**
+     * Find a spot inside exhibit to place food
+     */
+    private findFoodPlacementSpot(exhibit: Exhibit): { x: number; y: number } | null {
+        const interiorTiles = exhibit.interiorTiles || [];
+        if (interiorTiles.length === 0) return null;
+
+        // Shuffle tiles for variety
+        const shuffled = [...interiorTiles].sort(() => Math.random() - 0.5);
+
+        for (const tile of shuffled) {
+            const tileData = this.world.getTile(tile.x, tile.y);
+            if (!tileData) continue;
+            if (tileData.terrain === 'water') continue;
+            if (tileData.path) continue; // Don't place food on paths
+
+            // Check if there's already food here
+            const existingFood = this.getFoodPilesAtTile(tile.x, tile.y);
+            if (existingFood.length > 0) continue;
+
+            return tile;
+        }
+
+        return null;
+    }
+
+    /**
+     * Generate fence repair tasks for damaged fences
+     */
+    private generateFenceRepairTasks(): void {
+        const edges: EdgeDirection[] = ['north', 'south', 'east', 'west'];
+
+        for (const [key, data] of this.fenceConditions) {
+            // Only create tasks for damaged fences (not good)
+            if (data.condition === 'good') continue;
+
+            // Parse key
+            const [xStr, yStr, edge] = key.split(',');
+            const tileX = parseInt(xStr);
+            const tileY = parseInt(yStr);
+            const edgeDir = edge as EdgeDirection;
+
+            // Verify fence still exists
+            const fenceType = this.world.getFence(tileX, tileY, edgeDir);
+            if (!fenceType) continue;
+
+            // Check if task already exists
+            if (this.taskManager.hasTaskFor('repair_fence', null, {
+                fenceTileX: tileX,
+                fenceTileY: tileY,
+                fenceEdge: edgeDir,
+            })) {
+                continue;
+            }
+
+            // Determine priority based on condition
+            let priority: number = Priority.LOW;
+            if (data.condition === 'failed') {
+                priority = Priority.URGENT;
+            } else if (data.condition === 'damaged') {
+                priority = Priority.NORMAL;
+            }
+
+            // Find work spot (tile adjacent to fence)
+            const workSpot = this.findFenceWorkSpot(tileX, tileY, edgeDir);
+            if (!workSpot) continue;
+
+            // Get exhibit ID if fence belongs to an exhibit
+            const exhibit = this.getExhibitByFence(tileX, tileY, edgeDir);
+
+            this.taskManager.addTask({
+                type: 'repair_fence',
+                priority,
+                targetTile: workSpot,
+                exhibitId: exhibit?.id ?? null,
+                data: {
+                    fenceTileX: tileX,
+                    fenceTileY: tileY,
+                    fenceEdge: edgeDir,
+                },
+                maxRetries: 3,
+            });
+        }
+    }
+
+    /**
+     * Find a tile adjacent to a fence where a worker can stand
+     */
+    private findFenceWorkSpot(tileX: number, tileY: number, edge: EdgeDirection): { x: number; y: number } | null {
+        const spots: { x: number; y: number }[] = [];
+
+        // The tile that has the fence
+        spots.push({ x: tileX, y: tileY });
+
+        // The adjacent tile across the fence edge
+        const adjacentOffsets: Record<EdgeDirection, { dx: number; dy: number }> = {
+            north: { dx: -1, dy: 0 },
+            south: { dx: 1, dy: 0 },
+            east: { dx: 0, dy: -1 },
+            west: { dx: 0, dy: 1 },
+        };
+
+        const offset = adjacentOffsets[edge];
+        spots.push({ x: tileX + offset.dx, y: tileY + offset.dy });
+
+        // Find a walkable spot (prefer paths)
+        for (const spot of spots) {
+            const tile = this.world.getTile(spot.x, spot.y);
+            if (!tile) continue;
+            if (tile.terrain === 'water') continue;
+            if (tile.path) return spot;
+        }
+
+        // No path tile found, try any walkable tile
+        for (const spot of spots) {
+            const tile = this.world.getTile(spot.x, spot.y);
+            if (!tile) continue;
+            if (tile.terrain === 'water') continue;
+            return spot;
+        }
+
+        return null;
     }
 
     /**
@@ -949,6 +1159,8 @@ export class Game {
             const name = nameInput.value.trim() || `Exhibit #${exhibit.id}`;
             exhibit.setName(name);
             this.exhibits.push(exhibit);
+            // Create task queue for this exhibit
+            this.taskManager.ensureExhibitQueue(exhibit.id);
             console.log(`Created new exhibit: ${exhibit.name} with ${exhibit.interiorTiles.length} tiles`);
             this.hideExhibitModal();
             cleanup();
@@ -1043,6 +1255,8 @@ export class Game {
         const index = this.exhibits.indexOf(exhibit);
         if (index !== -1) {
             this.exhibits.splice(index, 1);
+            // Clean up task queue for this exhibit
+            this.taskManager.removeExhibitTasks(exhibit.id);
         }
     }
 
@@ -1366,6 +1580,26 @@ export class Game {
      */
     getFoodPilesAtTile(tileX: number, tileY: number): FoodPile[] {
         return this.foodPiles.filter(fp => fp.tileX === tileX && fp.tileY === tileY);
+    }
+
+    // =============================================
+    // Stub Methods (for future implementation)
+    // =============================================
+
+    /**
+     * Remove poop at a tile (stub - poop system not yet implemented)
+     */
+    removePoopAt(tileX: number, tileY: number): void {
+        // TODO: Implement poop system
+        console.log(`Poop cleaned at (${tileX}, ${tileY})`);
+    }
+
+    /**
+     * Remove trash at a tile (stub - trash system not yet implemented)
+     */
+    removeTrashAt(tileX: number, tileY: number): void {
+        // TODO: Implement trash system
+        console.log(`Trash cleaned at (${tileX}, ${tileY})`);
     }
 
     /**

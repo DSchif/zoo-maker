@@ -34,6 +34,7 @@
                     <button id="toggle-foliage" class="visibility-btn active" title="Toggle Foliage">🌳</button>
                     <button id="toggle-buildings" class="visibility-btn active" title="Toggle Buildings">🏠</button>
                 </div>
+                <button id="tasks-btn" title="Task Queue">📋 <span id="tasks-count">0</span></button>
                 <div id="date-display">
                     <span id="day">January 1, Year 1</span>
                     <button id="speed-btn" title="Change Speed">1x</button>
@@ -74,6 +75,28 @@
                         <span class="toggle-slider"></span>
                         <span class="toggle-label">Show Interaction Points</span>
                     </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task List Panel -->
+        <div id="task-list-panel" class="hidden">
+            <div class="task-list-header">
+                <h3>Task Queue</h3>
+                <button id="task-list-close" class="panel-close-btn">✕</button>
+            </div>
+            <div class="task-list-stats">
+                <span class="task-stat">Queued: <strong id="task-stat-queued">0</strong></span>
+                <span class="task-stat">Active: <strong id="task-stat-active">0</strong></span>
+            </div>
+            <div class="task-list-body">
+                <div class="task-list-section">
+                    <h4>Active Tasks</h4>
+                    <div id="active-tasks-list" class="tasks-container"></div>
+                </div>
+                <div class="task-list-section">
+                    <h4>Queued Tasks</h4>
+                    <div id="queued-tasks-list" class="tasks-container"></div>
                 </div>
             </div>
         </div>
@@ -383,6 +406,11 @@
                     <span id="selected-staff-state" class="status-value"></span>
                 </div>
                 <div id="selected-staff-task" class="staff-task hidden"></div>
+
+                <div class="staff-panel-section">
+                    <h4>Task Types</h4>
+                    <div id="staff-task-toggles" class="task-toggles-list"></div>
+                </div>
 
                 <div class="staff-panel-section">
                     <h4>Assigned Exhibits</h4>

@@ -184,6 +184,25 @@ export class InputHandler {
             settingsPanel?.classList.add('hidden');
         });
 
+        // Task list button
+        const tasksBtn = document.getElementById('tasks-btn');
+        const taskListPanel = document.getElementById('task-list-panel');
+        const taskListClose = document.getElementById('task-list-close');
+
+        tasksBtn?.addEventListener('click', () => {
+            const isHidden = taskListPanel?.classList.toggle('hidden');
+            if (!isHidden) {
+                this.updateTaskListPanel();
+            }
+        });
+
+        taskListClose?.addEventListener('click', () => {
+            taskListPanel?.classList.add('hidden');
+        });
+
+        // Start task count update interval
+        setInterval(() => this.updateTaskCount(), 1000);
+
         // Visibility toggle buttons
         const toggleGuests = document.getElementById('toggle-guests');
         const toggleFoliage = document.getElementById('toggle-foliage');
@@ -1516,6 +1535,186 @@ export class InputHandler {
                 });
             } else {
                 availableList.innerHTML = '';
+            }
+        }
+
+        // Update task toggles
+        this.updateStaffTaskToggles();
+    }
+
+    /**
+     * Update task toggles for the selected staff
+     */
+    private updateStaffTaskToggles(): void {
+        if (!this.selectedStaff) return;
+
+        const togglesList = document.getElementById('staff-task-toggles');
+        if (!togglesList) return;
+
+        const staff = this.selectedStaff;
+        const staffType = staff.staffType;
+
+        // Get task types for this staff type
+        const taskLabels: Record<string, string> = {
+            'feed_animals': 'Feed Animals',
+            'clean_poop': 'Clean Poop',
+            'repair_fence': 'Repair Fences',
+            'clean_trash': 'Clean Trash',
+            'empty_garbage': 'Empty Garbage Cans',
+        };
+
+        const zookeeperTasks = ['feed_animals', 'clean_poop'];
+        const maintenanceTasks = ['repair_fence', 'clean_trash', 'empty_garbage'];
+
+        const availableTasks = staffType === 'zookeeper' ? zookeeperTasks : maintenanceTasks;
+
+        // Generate toggle HTML
+        togglesList.innerHTML = availableTasks.map(taskType => {
+            const isEnabled = staff.enabledTaskTypes?.has(taskType) ?? true;
+            return `
+                <label class="task-toggle-item">
+                    <input type="checkbox"
+                           data-task-type="${taskType}"
+                           ${isEnabled ? 'checked' : ''}>
+                    <span class="task-label${isEnabled ? '' : ' disabled'}">${taskLabels[taskType] || taskType}</span>
+                </label>
+            `;
+        }).join('');
+
+        // Bind checkbox events
+        const checkboxes = togglesList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const taskType = (checkbox as HTMLInputElement).dataset.taskType;
+                if (taskType && this.selectedStaff) {
+                    this.selectedStaff.toggleTaskType(taskType);
+                    // Update the label style immediately
+                    const label = (checkbox as HTMLInputElement).closest('.task-toggle-item')?.querySelector('.task-label');
+                    if (label) {
+                        if ((checkbox as HTMLInputElement).checked) {
+                            label.classList.remove('disabled');
+                        } else {
+                            label.classList.add('disabled');
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Update task count in the top bar button
+     */
+    private updateTaskCount(): void {
+        const taskManager = this.game.taskManager;
+        if (!taskManager) return;
+
+        const stats = taskManager.getStats();
+        const totalTasks = stats.queued + stats.active;
+
+        const countEl = document.getElementById('tasks-count');
+        const btn = document.getElementById('tasks-btn');
+
+        if (countEl) {
+            countEl.textContent = totalTasks.toString();
+        }
+
+        if (btn) {
+            btn.classList.toggle('has-tasks', totalTasks > 0);
+        }
+
+        // Update panel if visible
+        const panel = document.getElementById('task-list-panel');
+        if (panel && !panel.classList.contains('hidden')) {
+            this.updateTaskListPanel();
+        }
+    }
+
+    /**
+     * Update the task list panel content
+     */
+    private updateTaskListPanel(): void {
+        const taskManager = this.game.taskManager;
+        if (!taskManager) return;
+
+        const stats = taskManager.getStats();
+        const queuedTasks = taskManager.getAllQueuedTasks();
+        const activeTasks = taskManager.getAllActiveTasks();
+
+        // Update stats
+        const queuedEl = document.getElementById('task-stat-queued');
+        const activeEl = document.getElementById('task-stat-active');
+        if (queuedEl) queuedEl.textContent = stats.queued.toString();
+        if (activeEl) activeEl.textContent = stats.active.toString();
+
+        // Task type labels and icons
+        const taskInfo: Record<string, { label: string; icon: string }> = {
+            'feed_animals': { label: 'Feed Animals', icon: '🍖' },
+            'clean_poop': { label: 'Clean Poop', icon: '💩' },
+            'repair_fence': { label: 'Repair Fence', icon: '🔧' },
+            'clean_trash': { label: 'Clean Trash', icon: '🗑️' },
+            'empty_garbage': { label: 'Empty Garbage', icon: '🚮' },
+        };
+
+        const priorityLabels: Record<number, string> = {
+            0: 'urgent',
+            1: 'normal',
+            2: 'low',
+        };
+
+        // Render active tasks
+        const activeList = document.getElementById('active-tasks-list');
+        if (activeList) {
+            if (activeTasks.length > 0) {
+                activeList.innerHTML = activeTasks.map(({ task, workerId }) => {
+                    const info = taskInfo[task.type] || { label: task.type, icon: '📋' };
+                    const priority = priorityLabels[task.priority] || 'normal';
+                    const worker = this.game.staff.find(s => s.id === workerId);
+                    const workerName = worker?.name || `Worker #${workerId}`;
+
+                    return `
+                        <div class="task-item">
+                            <span class="task-item-icon">${info.icon}</span>
+                            <div class="task-item-info">
+                                <div class="task-item-type">${info.label}</div>
+                                <div class="task-item-location">(${task.targetTile.x}, ${task.targetTile.y})</div>
+                            </div>
+                            <span class="task-item-worker">${workerName}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                activeList.innerHTML = '';
+            }
+        }
+
+        // Render queued tasks (sorted by priority, then createdAt)
+        const sortedQueued = [...queuedTasks].sort((a, b) => {
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return a.createdAt - b.createdAt;
+        });
+
+        const queuedList = document.getElementById('queued-tasks-list');
+        if (queuedList) {
+            if (sortedQueued.length > 0) {
+                queuedList.innerHTML = sortedQueued.map(task => {
+                    const info = taskInfo[task.type] || { label: task.type, icon: '📋' };
+                    const priority = priorityLabels[task.priority] || 'normal';
+
+                    return `
+                        <div class="task-item">
+                            <span class="task-item-icon">${info.icon}</span>
+                            <div class="task-item-info">
+                                <div class="task-item-type">${info.label}</div>
+                                <div class="task-item-location">(${task.targetTile.x}, ${task.targetTile.y})</div>
+                            </div>
+                            <span class="task-item-priority ${priority}">${priority}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                queuedList.innerHTML = '';
             }
         }
     }

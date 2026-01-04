@@ -132,7 +132,22 @@ export type FoliageType =
     | 'magnolia_tree'
     | 'globe_willow'
     | 'wild_olive'
-    | 'pacific_dogwood';
+    | 'pacific_dogwood'
+    // Coniferous forest biome
+    | 'pine_bush'
+    | 'pine_tree'
+    | 'fir_tree'
+    | 'chinese_fir'
+    | 'yew_tree'
+    | 'dawn_redwood'
+    | 'yellow_cedar'
+    | 'spruce_tree'
+    | 'lodgepole_pine'
+    | 'western_red_cedar'
+    | 'norfolk_island_pine'
+    | 'club_moss'
+    | 'walchian_conifer'
+    | 'lepidodendron';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

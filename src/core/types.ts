@@ -110,7 +110,10 @@ export type FoliageType =
     // Prairie biome
     | 'prairie_grass'
     | 'shrub'
-    | 'wildflowers';
+    | 'wildflowers'
+    // Grassland biome
+    | 'broadleaf_bush'
+    | 'monkey_puzzle_tree';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

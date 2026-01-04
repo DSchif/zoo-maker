@@ -648,6 +648,9 @@ export class InputHandler {
                 { id: 'prairie_grass', name: 'Prairie Grass', cost: 20, icon: '🌿', biome: 'prairie' },
                 { id: 'shrub', name: 'Prairie Shrub', cost: 75, icon: '🌲', biome: 'prairie' },
                 { id: 'wildflowers', name: 'Wildflowers', cost: 30, icon: '🌸', biome: 'prairie' },
+                // Grassland
+                { id: 'broadleaf_bush', name: 'Broadleaf Bush', cost: 65, icon: '🌿', biome: 'grass' },
+                { id: 'monkey_puzzle_tree', name: 'Monkey Puzzle Tree', cost: 180, icon: '🌲', biome: 'grass' },
             ],
             shelter: [
                 { id: 'concrete_small', name: 'Small Shelter (2x1)', cost: 500, icon: '🏠' },
@@ -774,6 +777,7 @@ export class InputHandler {
         const biomeIcons: Record<string, string> = {
             savanna_grass: '🌾',
             prairie: '🌿',
+            grass: '🍀',
             rainforest: '🌴',
             temperate: '🌲',
             tundra: '❄️',

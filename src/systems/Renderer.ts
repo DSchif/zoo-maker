@@ -3506,6 +3506,120 @@ export class Renderer {
                 break;
             }
 
+            case 'broadleaf_bush': {
+                // Dense bush with broad green leaves
+                // Shadow
+                graphics.ellipse(x, y + 4, 18 * scale, 7 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Main bush body
+                graphics.ellipse(x, y - 10 * scale, 20 * scale, 16 * scale);
+                graphics.fill(0x2d5a1e);
+
+                // Broad leaf clusters
+                const leafColors = [0x3d7a2e, 0x4d8a3e, 0x2d6a1e, 0x3d7028];
+                for (let i = 0; i < 14; i++) {
+                    const angle = (i / 14) * Math.PI * 2;
+                    const dist = 8 + seededRandom(i) * 8;
+                    const lx = x + Math.cos(angle) * dist * scale;
+                    const ly = y - 10 * scale + Math.sin(angle) * dist * 0.7 * scale;
+                    const leafW = (6 + seededRandom(i + 10) * 4) * scale;
+                    const leafH = (4 + seededRandom(i + 20) * 3) * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 30) * leafColors.length);
+
+                    // Broad oval leaves
+                    graphics.ellipse(lx, ly, leafW, leafH);
+                    graphics.fill(leafColors[colorIdx]);
+                }
+
+                // Leaf vein details on top leaves
+                for (let i = 0; i < 5; i++) {
+                    const lx = x + (seededRandom(i + 100) - 0.5) * 24 * scale;
+                    const ly = y - 14 * scale + (seededRandom(i + 110) - 0.5) * 10 * scale;
+                    graphics.moveTo(lx - 4 * scale, ly);
+                    graphics.lineTo(lx + 4 * scale, ly);
+                    graphics.stroke({ color: 0x1d4a0e, width: 0.5, alpha: 0.4 });
+                }
+
+                // Highlight
+                graphics.ellipse(x - 4 * scale, y - 18 * scale, 8 * scale, 5 * scale);
+                graphics.fill({ color: 0x5d9a4e, alpha: 0.4 });
+                break;
+            }
+
+            case 'monkey_puzzle_tree': {
+                // Ancient conifer with distinctive spiky branches
+                // Shadow
+                graphics.ellipse(x, y + 6, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk - tall and straight
+                const mpH = 65 * scale;
+                graphics.rect(x - 4 * scale, y - mpH + 15, 8 * scale, mpH - 10);
+                graphics.fill(0x4a3a2a);
+
+                // Bark texture
+                for (let i = 0; i < 6; i++) {
+                    const by = y - 10 * scale - i * 8 * scale;
+                    graphics.moveTo(x - 3 * scale, by);
+                    graphics.lineTo(x + 2 * scale, by + 2);
+                    graphics.stroke({ color: 0x3a2a1a, width: 1, alpha: 0.5 });
+                }
+
+                // Distinctive tiered branches with spiky leaves
+                // Monkey puzzle trees have whorls of branches at regular intervals
+                const tiers = 5;
+                for (let tier = 0; tier < tiers; tier++) {
+                    const tierY = y - 20 * scale - tier * 10 * scale;
+                    const tierWidth = (18 - tier * 2.5) * scale;
+                    const branchCount = 6;
+
+                    for (let b = 0; b < branchCount; b++) {
+                        const angle = (b / branchCount) * Math.PI * 2 + tier * 0.3;
+                        const bx = x + Math.cos(angle) * tierWidth;
+                        const by = tierY + Math.sin(angle) * tierWidth * 0.3;
+
+                        // Branch
+                        graphics.moveTo(x, tierY);
+                        graphics.lineTo(bx, by);
+                        graphics.stroke({ color: 0x2a4a1a, width: 3 * scale });
+
+                        // Spiky triangular leaves along branch
+                        const leafCount = 4;
+                        for (let l = 0; l < leafCount; l++) {
+                            const t = 0.3 + l * 0.2;
+                            const lx = x + (bx - x) * t;
+                            const ly = tierY + (by - tierY) * t;
+
+                            // Triangular spiky leaf
+                            graphics.moveTo(lx, ly - 3 * scale);
+                            graphics.lineTo(lx - 2 * scale, ly + 2 * scale);
+                            graphics.lineTo(lx + 2 * scale, ly + 2 * scale);
+                            graphics.closePath();
+                            graphics.fill(0x2a5a1a);
+                        }
+                    }
+                }
+
+                // Top tuft
+                graphics.moveTo(x, y - mpH + 5);
+                graphics.lineTo(x - 6 * scale, y - mpH + 15);
+                graphics.lineTo(x + 6 * scale, y - mpH + 15);
+                graphics.closePath();
+                graphics.fill(0x3a6a2a);
+
+                // Additional top spikes
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    const tipX = x + Math.cos(angle) * 5 * scale;
+                    const tipY = y - mpH + 8 + Math.sin(angle) * 3 * scale;
+                    graphics.moveTo(x, y - mpH + 10);
+                    graphics.lineTo(tipX, tipY);
+                    graphics.stroke({ color: 0x2a5a1a, width: 2 * scale });
+                }
+                break;
+            }
+
             default: {
                 // Generic plant with more detail
                 graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);

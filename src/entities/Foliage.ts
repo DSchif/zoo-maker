@@ -213,6 +213,30 @@ export const FoliageTypes: Record<FoliageType, FoliageTypeData> = {
         description: 'Colorful native prairie wildflowers',
         allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
+
+    // Grassland biome
+    broadleaf_bush: {
+        id: 'broadleaf_bush',
+        name: 'Broadleaf Bush',
+        icon: '🌿',
+        biome: 'grass',
+        cost: 65,
+        tileSpace: 0.2,
+        height: 'medium',
+        description: 'Dense bush with broad green leaves native to North America',
+        allowedTerrains: ['grass', 'dirt', 'prairie', 'savanna_grass'],
+    },
+    monkey_puzzle_tree: {
+        id: 'monkey_puzzle_tree',
+        name: 'Monkey Puzzle Tree',
+        icon: '🌲',
+        biome: 'grass',
+        cost: 180,
+        tileSpace: 0.3,
+        height: 'tall',
+        description: 'Ancient conifer with distinctive spiky branches from the Cretaceous period',
+        allowedTerrains: ['grass', 'dirt', 'prairie', 'savanna_grass', 'rainforest_floor'],
+    },
 };
 
 /**

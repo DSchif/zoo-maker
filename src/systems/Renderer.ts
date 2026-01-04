@@ -156,6 +156,7 @@ export class Renderer {
             { name: 'zookeeper', url: '/sprites/zookeeper.svg' },
             { name: 'maintenance_worker', url: '/sprites/maintenance_worker.svg' },
             { name: 'entrance_gate', url: '/sprites/entrance_gate.svg' },
+            { name: 'entrance_gate_rot1', url: '/sprites/entrance_gate_rot1.svg' },
         ];
 
         try {
@@ -223,18 +224,53 @@ export class Renderer {
      * Render a chunk to a RenderTexture (bakes terrain + paths)
      */
     private renderChunk(chunk: Chunk): void {
-        const key = `${chunk.x},${chunk.y}`;
+        const key = `${chunk.x},${chunk.y},${this.game.camera.rotation}`;
         const chunkSize = this.game.world.chunkSize;
 
-        // Calculate chunk dimensions in screen space
-        // A chunk covers chunkSize x chunkSize tiles
-        // The bounding box in isometric space needs to account for the diamond shape
-        const chunkPixelWidth = (chunkSize * 2) * (TILE_WIDTH / 2) + TILE_WIDTH;
-        const chunkPixelHeight = (chunkSize * 2) * (TILE_HEIGHT / 2) + TILE_HEIGHT;
+        // Calculate offset for this chunk's local coordinate system
+        const baseWorldX = chunk.x * chunkSize;
+        const baseWorldY = chunk.y * chunkSize;
 
-        // Create or get the render texture
+        // Calculate the actual screen-space bounding box for this chunk at the current rotation
+        // by checking all 4 corner tiles
+        const corners = [
+            this.game.camera.tileToScreen(baseWorldX, baseWorldY),
+            this.game.camera.tileToScreen(baseWorldX + chunkSize - 1, baseWorldY),
+            this.game.camera.tileToScreen(baseWorldX, baseWorldY + chunkSize - 1),
+            this.game.camera.tileToScreen(baseWorldX + chunkSize - 1, baseWorldY + chunkSize - 1),
+        ];
+
+        // Find min/max bounds with padding for tile size
+        // Use extra padding to prevent gaps at chunk boundaries due to zoom rounding
+        const padding = 4;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const corner of corners) {
+            minX = Math.min(minX, corner.x - TILE_WIDTH / 2 - padding);
+            maxX = Math.max(maxX, corner.x + TILE_WIDTH / 2 + padding);
+            minY = Math.min(minY, corner.y - TILE_HEIGHT / 2 - padding);
+            maxY = Math.max(maxY, corner.y + TILE_HEIGHT + padding);
+        }
+
+        // Floor minX/minY to avoid subpixel positioning issues at different zoom levels
+        minX = Math.floor(minX);
+        minY = Math.floor(minY);
+        const chunkPixelWidth = Math.ceil(maxX - minX) + TILE_WIDTH;
+        const chunkPixelHeight = Math.ceil(maxY - minY) + TILE_HEIGHT;
+
+        // Create or get the render texture (keyed by rotation too)
         let cached = this.chunkTextures.get(key);
         if (!cached) {
+            // Clean up old rotation's texture if it exists
+            for (let r = 0; r < 4; r++) {
+                const oldKey = `${chunk.x},${chunk.y},${r}`;
+                const old = this.chunkTextures.get(oldKey);
+                if (old && oldKey !== key) {
+                    old.sprite.destroy();
+                    old.texture.destroy();
+                    this.chunkTextures.delete(oldKey);
+                }
+            }
+
             const texture = RenderTexture.create({
                 width: chunkPixelWidth,
                 height: chunkPixelHeight,
@@ -248,10 +284,6 @@ export class Renderer {
         // Create graphics for drawing
         const graphics = new Graphics();
 
-        // Calculate offset for this chunk's local coordinate system
-        const baseWorldX = chunk.x * chunkSize;
-        const baseWorldY = chunk.y * chunkSize;
-
         // Draw each tile
         for (let ly = 0; ly < chunkSize; ly++) {
             for (let lx = 0; lx < chunkSize; lx++) {
@@ -261,12 +293,10 @@ export class Renderer {
                 const worldX = baseWorldX + lx;
                 const worldY = baseWorldY + ly;
 
-                // Convert to screen position relative to chunk origin
+                // Convert to screen position relative to chunk's min bounds
                 const screenPos = this.game.camera.tileToScreen(worldX, worldY);
-                const chunkOrigin = this.game.camera.tileToScreen(baseWorldX, baseWorldY);
-
-                const localX = screenPos.x - chunkOrigin.x + chunkPixelWidth / 2;
-                const localY = screenPos.y - chunkOrigin.y + TILE_HEIGHT;
+                const localX = screenPos.x - minX;
+                const localY = screenPos.y - minY;
 
                 this.drawTile(graphics, localX, localY, tile, worldX, worldY);
             }
@@ -279,10 +309,9 @@ export class Renderer {
             clear: true,
         });
 
-        // Position the sprite
-        const chunkOrigin = this.game.camera.tileToScreen(baseWorldX, baseWorldY);
-        cached.sprite.x = chunkOrigin.x - chunkPixelWidth / 2;
-        cached.sprite.y = chunkOrigin.y - TILE_HEIGHT;
+        // Position the sprite at the min bounds
+        cached.sprite.x = minX;
+        cached.sprite.y = minY;
 
         // Clean up
         graphics.destroy();
@@ -298,8 +327,8 @@ export class Renderer {
         const hw = TILE_WIDTH / 2;
         const hh = TILE_HEIGHT / 2;
 
-        // Add small overlap to prevent gaps between tiles (anti-aliasing fix)
-        const overlap = 0.5;
+        // Add overlap to prevent gaps between tiles at various zoom levels
+        const overlap = 1.5;
 
         const colors = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.grass;
 
@@ -318,15 +347,15 @@ export class Renderer {
         // Draw terrain details (grass blades, pebbles, etc.)
         this.drawTerrainDetails(graphics, x, y, tile.terrain, worldX, worldY);
 
-        // Draw path if present (fills entire tile)
+        // Draw path if present (fills entire tile with overlap to prevent gaps)
         if (tile.path) {
             const pathColor = PATH_COLORS[tile.path] || PATH_COLORS.dirt;
 
             graphics.poly([
-                { x: x, y: y - hh },      // Top
-                { x: x + hw, y: y },       // Right
-                { x: x, y: y + hh },       // Bottom
-                { x: x - hw, y: y },       // Left
+                { x: x, y: y - hh - overlap },           // Top
+                { x: x + hw + overlap, y: y },           // Right
+                { x: x, y: y + hh + overlap },           // Bottom
+                { x: x - hw - overlap, y: y },           // Left
             ]);
             graphics.fill(pathColor);
 
@@ -342,7 +371,7 @@ export class Renderer {
     private drawTerrainBlends(graphics: Graphics, x: number, y: number, currentTerrain: string, worldX: number, worldY: number): void {
         const hw = TILE_WIDTH / 2;
         const hh = TILE_HEIGHT / 2;
-        const overlap = 0.5; // Match the base tile overlap
+        const overlap = 1.5; // Match the base tile overlap
 
         // Check each neighbor and draw blend if terrain differs
         // In isometric: +X goes bottom-right, +Y goes bottom-left
@@ -373,9 +402,12 @@ export class Renderer {
 
             const neighborColors = TERRAIN_COLORS[neighborTile.terrain] || TERRAIN_COLORS.grass;
 
+            // Convert world edge to screen edge based on camera rotation
+            const screenEdge = this.getScreenEdge(neighbor.edge);
+
             // Draw parallelogram band along the edge (constant width)
             // Outer points include overlap to match base tile anti-aliasing
-            switch (neighbor.edge) {
+            switch (screenEdge) {
                 case 'north':
                     // Top-left edge
                     graphics.poly([
@@ -498,8 +530,11 @@ export class Renderer {
 
             const neighborColors = TERRAIN_COLORS[neighborTile.terrain] || TERRAIN_COLORS.grass;
 
+            // Convert world corner to screen corner based on camera rotation
+            const screenCorner = this.getScreenCorner(corner.corner as 'top' | 'right' | 'bottom' | 'left');
+
             // Draw small triangle at the corner
-            switch (corner.corner) {
+            switch (screenCorner) {
                 case 'left':
                     graphics.poly([
                         { x: x - hw, y: y },
@@ -853,14 +888,16 @@ export class Renderer {
                 for (const edge of ['north', 'south', 'east', 'west'] as const) {
                     const fenceType = tile.fences[edge];
                     if (fenceType) {
-                        // Calculate depth based on edge position in isometric view
-                        // North/East edges are at the TOP of the diamond (render behind entities)
-                        // South/West edges are at the BOTTOM of the diamond (render in front)
-                        let depth = x + y;
-                        if (edge === 'south' || edge === 'west') {
-                            depth += 0.5;  // Bottom edges render after entities on same tile
+                        // Calculate depth using view-space coordinates
+                        let depth = this.getViewSpaceDepth(x, y);
+
+                        // Determine which edges are front-facing based on camera rotation
+                        // Front edges render after entities, back edges render before
+                        const frontEdges = this.getFrontEdges();
+                        if (frontEdges.includes(edge)) {
+                            depth += 0.5;  // Front edges render after entities on same tile
                         } else {
-                            depth -= 0.1;  // Top edges render before entities on same tile
+                            depth -= 0.1;  // Back edges render before entities on same tile
                         }
 
                         fenceEdges.push({
@@ -886,10 +923,13 @@ export class Renderer {
             const g = this.getPooledFenceGraphics();
             g.zIndex = fence.depth;
 
+            // Convert world edge to screen edge for proper visual rotation
+            const screenEdge = this.getScreenEdge(fence.edge);
+
             if (fence.isGate) {
-                this.drawGateEdge(g, fence.x, fence.y, fence.edge, fence.fenceType);
+                this.drawGateEdge(g, fence.x, fence.y, screenEdge, fence.fenceType);
             } else {
-                this.drawFenceEdge(g, fence.x, fence.y, fence.edge, fence.fenceType, fence.condition);
+                this.drawFenceEdge(g, fence.x, fence.y, screenEdge, fence.fenceType, fence.condition);
             }
         }
     }
@@ -1512,6 +1552,113 @@ export class Renderer {
     }
 
     /**
+     * Calculate view-space depth for an entity (for proper depth sorting with camera rotation)
+     */
+    private getViewSpaceDepth(worldX: number, worldY: number, offsetY: number = 0): number {
+        const viewPos = this.game.camera.rotateWorldToView(worldX, worldY);
+        return viewPos.x + viewPos.y + offsetY;
+    }
+
+    /**
+     * Get which WORLD fence edges are front-facing based on camera rotation
+     * Front edges are those whose screen representation is at the bottom of the isometric diamond
+     */
+    private getFrontEdges(): ('north' | 'south' | 'east' | 'west')[] {
+        // Screen edges south and west are always front-facing (bottom of diamond)
+        // We need to find which WORLD edges map to those screen edges at current rotation
+        // getScreenEdge uses: screenIndex = (worldIndex - rotation + 4) % 4
+        // Inverse is: worldIndex = (screenIndex + rotation) % 4
+        const edges: ('north' | 'east' | 'south' | 'west')[] = ['north', 'east', 'south', 'west'];
+        const rotation = this.game.camera.rotation;
+
+        // Screen south (index 2) and screen west (index 3) are front
+        const worldEdgeForScreenSouth = edges[(2 + rotation) % 4];
+        const worldEdgeForScreenWest = edges[(3 + rotation) % 4];
+
+        return [worldEdgeForScreenSouth, worldEdgeForScreenWest];
+    }
+
+    /**
+     * Get which building walls are visible based on camera rotation
+     * Returns array of wall indices (0-3) that should be rendered
+     * Since corners are mapped to screen positions, walls 2 and 3 are always the visible front walls
+     */
+    private getVisibleWalls(): number[] {
+        // Walls are always in screen-space order after corner mapping:
+        // Wall 0: back-left (left to top)
+        // Wall 1: back-right (top to right) - hidden
+        // Wall 2: front-right (right to bottom) - visible
+        // Wall 3: front-left (bottom to left) - visible
+        return [2, 3];
+    }
+
+    /**
+     * Get the draw order for building walls based on camera rotation
+     * Returns wall indices in back-to-front order for proper occlusion
+     */
+    private getWallDrawOrder(): number[] {
+        // At rotation 0: back walls are 0,1, front walls are 2,3 → draw order: 0,1,2,3
+        // Each rotation shifts the order
+        const rotation = this.game.camera.rotation;
+        return [
+            (0 + rotation) % 4,
+            (1 + rotation) % 4,
+            (2 + rotation) % 4,
+            (3 + rotation) % 4,
+        ];
+    }
+
+    /**
+     * Adjust 4-way direction (ne, se, sw, nw) based on camera rotation
+     * When camera rotates CW, world directions appear to rotate CCW on screen
+     */
+    private adjustDirection(worldDirection: string): string {
+        const directions = ['ne', 'se', 'sw', 'nw'];
+        const index = directions.indexOf(worldDirection);
+        if (index === -1) return worldDirection;
+
+        // When camera rotates CW, directions appear to rotate CCW (subtract rotation)
+        const newIndex = (index - this.game.camera.rotation + 4) % 4;
+        return directions[newIndex];
+    }
+
+    /**
+     * Adjust facingX (sprite flip) based on camera rotation
+     * For staff and guests that use simple left/right flipping
+     */
+    private adjustFacingX(worldFacingX: number): number {
+        // At 0° and 180°, facingX stays the same
+        // At 90° and 270°, facingX is inverted
+        const rotation = this.game.camera.rotation;
+        if (rotation === 1 || rotation === 3) {
+            return -worldFacingX;
+        }
+        return worldFacingX;
+    }
+
+    /**
+     * Get the screen-space edge for a world-space edge based on camera rotation
+     * When camera rotates CW, world edges appear to rotate CCW on screen
+     */
+    private getScreenEdge(worldEdge: 'north' | 'south' | 'east' | 'west'): 'north' | 'south' | 'east' | 'west' {
+        const edges: ('north' | 'east' | 'south' | 'west')[] = ['north', 'east', 'south', 'west'];
+        const worldIndex = edges.indexOf(worldEdge);
+        const screenIndex = (worldIndex - this.game.camera.rotation + 4) % 4;
+        return edges[screenIndex];
+    }
+
+    /**
+     * Convert world-space corner to screen-space corner based on camera rotation
+     * When camera rotates CW, world corners appear to rotate CCW on screen
+     */
+    private getScreenCorner(worldCorner: 'top' | 'right' | 'bottom' | 'left'): 'top' | 'right' | 'bottom' | 'left' {
+        const corners: ('top' | 'right' | 'bottom' | 'left')[] = ['top', 'right', 'bottom', 'left'];
+        const worldIndex = corners.indexOf(worldCorner);
+        const screenIndex = (worldIndex - this.game.camera.rotation + 4) % 4;
+        return corners[screenIndex];
+    }
+
+    /**
      * Render entities (depth-sorted)
      */
     private renderEntities(): void {
@@ -1539,7 +1686,7 @@ export class Renderer {
         items.push({
             type: 'entrance_gate',
             entity: null,
-            depth: entrance.x + entrance.y + 2, // Higher depth so arch renders in front of guests
+            depth: this.getViewSpaceDepth(entrance.x, entrance.y, 2), // Higher depth so arch renders in front of guests
             screenX: gateScreenPos.x,
             screenY: gateScreenPos.y,
         });
@@ -1554,7 +1701,7 @@ export class Renderer {
             items.push({
                 type: 'animal',
                 entity: animal,
-                depth: animal.getDepth(),
+                depth: this.getViewSpaceDepth(worldPos.x, worldPos.y, animal.offsetY),
                 screenX: screenPos.x,
                 screenY: screenPos.y,
             });
@@ -1567,7 +1714,7 @@ export class Renderer {
             items.push({
                 type: 'staff',
                 entity: staff,
-                depth: staff.getDepth(),
+                depth: this.getViewSpaceDepth(worldPos.x, worldPos.y, staff.offsetY),
                 screenX: screenPos.x,
                 screenY: screenPos.y,
             });
@@ -1584,7 +1731,7 @@ export class Renderer {
                 items.push({
                     type: 'guest',
                     entity: guest,
-                    depth: guest.getDepth(),
+                    depth: this.getViewSpaceDepth(worldPos.x, worldPos.y, guest.offsetY),
                     screenX: screenPos.x,
                     screenY: screenPos.y,
                 });
@@ -1599,7 +1746,7 @@ export class Renderer {
                 items.push({
                     type: 'foliage',
                     entity: foliageItem,
-                    depth: foliageItem.getDepth(),
+                    depth: this.getViewSpaceDepth(worldPos.x, worldPos.y, foliageItem.offsetY),
                     screenX: screenPos.x,
                     screenY: screenPos.y,
                 });
@@ -1613,7 +1760,7 @@ export class Renderer {
             items.push({
                 type: 'food',
                 entity: pile,
-                depth: pile.getDepth(),
+                depth: this.getViewSpaceDepth(worldPos.x, worldPos.y, pile.offsetY),
                 screenX: screenPos.x,
                 screenY: screenPos.y,
             });
@@ -1624,10 +1771,13 @@ export class Renderer {
             for (const shelter of this.game.shelters) {
                 const worldPos = shelter.getWorldPos();
                 const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                // Use the front corner of the shelter for depth (in world space: tileX + width - 1, tileY + depth - 1)
+                const frontX = shelter.tileX + shelter.width - 1;
+                const frontY = shelter.tileY + shelter.depth - 1;
                 items.push({
                     type: 'shelter',
                     entity: shelter,
-                    depth: shelter.getDepth(),
+                    depth: this.getViewSpaceDepth(frontX, frontY),
                     screenX: screenPos.x,
                     screenY: screenPos.y,
                 });
@@ -1639,10 +1789,13 @@ export class Renderer {
             for (const building of this.game.buildings) {
                 const worldPos = building.getWorldPos();
                 const screenPos = this.game.camera.tileToScreen(worldPos.x, worldPos.y);
+                // Use the front corner of the building for depth
+                const frontX = building.tileX + building.width - 1;
+                const frontY = building.tileY + building.depth - 1;
                 items.push({
                     type: 'building',
                     entity: building,
-                    depth: building.getDepth(),
+                    depth: this.getViewSpaceDepth(frontX, frontY),
                     screenX: screenPos.x,
                     screenY: screenPos.y,
                 });
@@ -1844,14 +1997,31 @@ export class Renderer {
      * Draw the entrance gate
      */
     private drawEntranceGate(x: number, y: number, depth: number): void {
-        const texture = this.textures.get('entrance_gate');
+        const cameraRotation = this.game.camera.rotation;
+
+        // Use different sprite based on camera rotation:
+        // - Rotation 0: entrance_gate (normal)
+        // - Rotation 1: entrance_gate_rot1 (perpendicular view)
+        // - Rotation 2: entrance_gate_rot1 (flipped)
+        // - Rotation 3: entrance_gate (flipped)
+        const useRotatedSprite = cameraRotation === 1 || cameraRotation === 2;
+        const textureName = useRotatedSprite ? 'entrance_gate_rot1' : 'entrance_gate';
+        const texture = this.textures.get(textureName);
+
         if (texture) {
             const sprite = this.getPooledSprite(texture);
             sprite.anchor.set(0.5, 0.75); // Center horizontally, anchor near bottom
             sprite.x = x;
             sprite.y = y + 8; // Offset to align with entrance tiles
             sprite.zIndex = depth;
-            sprite.scale.set(1.1); // Scale to span entrance area
+
+            // Flip sprite for "back" views (rotations 2 and 3)
+            const baseScale = 1.1;
+            if (cameraRotation === 2 || cameraRotation === 3) {
+                sprite.scale.set(-baseScale, baseScale); // Flip horizontally
+            } else {
+                sprite.scale.set(baseScale, baseScale); // Normal
+            }
         } else {
             // Fallback: draw simple gate with graphics
             const g = this.getPooledGraphics();
@@ -1880,7 +2050,8 @@ export class Renderer {
      * Draw an animal using sprites
      */
     private drawAnimalSprite(x: number, y: number, animal: any, depth: number): void {
-        const direction = animal.facingDirection || 'ne';
+        const worldDirection = animal.facingDirection || 'ne';
+        const direction = this.adjustDirection(worldDirection);
         let textureName: string;
 
         if (animal.species === 'lion') {
@@ -1929,8 +2100,9 @@ export class Renderer {
         sprite.scale.set(0.7);
         sprite.zIndex = depth;
 
-        // Flip based on facing direction
-        const facing = staff.facingX || 1;
+        // Flip based on facing direction (adjusted for camera rotation)
+        const worldFacing = staff.facingX || 1;
+        const facing = this.adjustFacingX(worldFacing);
         sprite.scale.x = Math.abs(sprite.scale.x) * facing;
 
         // Show task emoji above staff when working
@@ -1964,8 +2136,9 @@ export class Renderer {
         sprite.scale.set(0.6);
         sprite.zIndex = depth;
 
-        // Flip based on facing direction
-        const facing = guest.facingX || 1;
+        // Flip based on facing direction (adjusted for camera rotation)
+        const worldFacing = guest.facingX || 1;
+        const facing = this.adjustFacingX(worldFacing);
         sprite.scale.x = Math.abs(sprite.scale.x) * facing;
     }
 
@@ -1973,7 +2146,8 @@ export class Renderer {
      * Draw an animal with detailed textures
      */
     private drawAnimal(graphics: Graphics, x: number, y: number, animal: any): void {
-        const facing = animal.facingX || 1; // 1 = right, -1 = left
+        const worldFacing = animal.facingX || 1; // 1 = right, -1 = left
+        const facing = this.adjustFacingX(worldFacing);
         const scale = animal.scale || 1;
         const isMoving = animal.isMoving || false;
         const animTimer = animal.animTimer || 0;
@@ -2304,7 +2478,8 @@ export class Renderer {
      * Draw a staff member
      */
     private drawStaff(graphics: Graphics, x: number, y: number, staff: any): void {
-        const facing = staff.facingX || 1;
+        const worldFacing = staff.facingX || 1;
+        const facing = this.adjustFacingX(worldFacing);
 
         // Shadow
         graphics.ellipse(x, y + 4, 8, 4);
@@ -2331,7 +2506,8 @@ export class Renderer {
      * Draw a guest with walking animation
      */
     private drawGuest(graphics: Graphics, x: number, y: number, guest: any): void {
-        const facing = guest.facingX || 1;
+        const worldFacing = guest.facingX || 1;
+        const facing = this.adjustFacingX(worldFacing);
         const isMoving = guest.isMoving || false;
         const animTimer = guest.animTimer || 0;
 
@@ -2680,11 +2856,22 @@ export class Renderer {
         const anchorX = shelter.tileX;
         const anchorY = shelter.tileY;
 
-        // Calculate screen positions for the corners of the isometric footprint
-        const topCorner = this.game.camera.tileToScreen(anchorX, anchorY);
-        const rightCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY);
-        const bottomCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1);
-        const leftCorner = this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1);
+        // Calculate all 4 corners in screen space (tileToScreen already applies camera rotation)
+        const corners = [
+            this.game.camera.tileToScreen(anchorX, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1),
+            this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1),
+        ];
+
+        // Sort corners by screen position to find top/right/bottom/left
+        // Top = smallest Y, Bottom = largest Y, Left = smallest X, Right = largest X
+        const sortedByY = [...corners].sort((a, b) => a.y - b.y);
+        const sortedByX = [...corners].sort((a, b) => a.x - b.x);
+        const topCorner = sortedByY[0];
+        const bottomCorner = sortedByY[3];
+        const leftCorner = sortedByX[0];
+        const rightCorner = sortedByX[3];
 
         // Shelter height based on size
         const shelterHeight = 30 + tileDepth * 8;
@@ -2703,35 +2890,37 @@ export class Renderer {
         const left = { x: leftCorner.x - hw, y: leftCorner.y };
 
         // Draw floor/base (isometric diamond matching tile footprint exactly)
-        // Only draw the visible portion (front half)
         graphics.poly([top, right, bottom, left]);
         graphics.fill(floorColor);
 
-        // Only draw the 3 visible walls (back-right wall from top to right is hidden)
+        // Define all 4 walls with their vertices
+        // Wall order: 0=back-left (left to top), 1=back-right (top to right),
+        //             2=front-right (right to bottom), 3=front-left (bottom to left)
+        const walls = [
+            { start: left, end: top, color: wallDark },     // 0: back-left
+            { start: top, end: right, color: wallDark },    // 1: back-right
+            { start: right, end: bottom, color: wallLight }, // 2: front-right
+            { start: bottom, end: left, color: wallLight },  // 3: front-left
+        ];
 
-        // Draw back-left wall (left to top) - darker, visible from left side
-        graphics.poly([
-            left, top,
-            { x: top.x, y: top.y - shelterHeight },
-            { x: left.x, y: left.y - shelterHeight },
-        ]);
-        graphics.fill(wallDark);
+        // Since corners are now sorted to screen positions, walls are always in screen-space:
+        // Wall 0: back-left (left to top), Wall 1: back-right (top to right)
+        // Wall 2: front-right (right to bottom), Wall 3: front-left (bottom to left)
+        // Wall 1 (back-right) is always hidden behind the building in isometric view
+        const skipWall = 1;
 
-        // Draw front-left wall (bottom to left) - medium shade
-        graphics.poly([
-            bottom, left,
-            { x: left.x, y: left.y - shelterHeight },
-            { x: bottom.x, y: bottom.y - shelterHeight },
-        ]);
-        graphics.fill(wallLight);
-
-        // Draw front-right wall (right to bottom) - lightest (faces camera directly)
-        graphics.poly([
-            right, bottom,
-            { x: bottom.x, y: bottom.y - shelterHeight },
-            { x: right.x, y: right.y - shelterHeight },
-        ]);
-        graphics.fill(wallLight);
+        // Draw walls in back-to-front order: 0 (back-left), then 2 and 3 (front walls)
+        const drawOrder = [0, 2, 3];
+        for (const wallIndex of drawOrder) {
+            if (wallIndex === skipWall) continue;
+            const wall = walls[wallIndex];
+            graphics.poly([
+                wall.start, wall.end,
+                { x: wall.end.x, y: wall.end.y - shelterHeight },
+                { x: wall.start.x, y: wall.start.y - shelterHeight },
+            ]);
+            graphics.fill(wall.color);
+        }
 
         // Draw entrance based on rotation
         // Door is sized to fit within one tile's face
@@ -2759,25 +2948,27 @@ export class Renderer {
             baseWall = 2; // front-right (short side for 2x1, at edge for 2x2)
         }
 
-        // Apply rotation to get actual wall
-        const actualWall = (baseWall + rotation) % 4;
+        // Apply building rotation to get world wall, then convert to screen wall
+        const worldWall = (baseWall + rotation) % 4;
+        const actualWall = (worldWall + this.game.camera.rotation) % 4;
 
-        // Define all 4 walls with their start/end points and tile counts
+        // Define all 4 walls with their start/end points and tile counts for entrance calculation
         // Wall 0 = back-left: left to top (spans origWidth tiles along X)
         // Wall 1 = back-right: top to right (spans origDepth tiles along Y)
         // Wall 2 = front-right: right to bottom (spans origDepth tiles along Y)
         // Wall 3 = front-left: bottom to left (spans origWidth tiles along X)
-        const walls = [
+        const entranceWalls = [
             { start: left, end: top, tileCount: tileWidth },      // back-left
             { start: top, end: right, tileCount: tileDepth },     // back-right
             { start: right, end: bottom, tileCount: tileDepth },  // front-right
             { start: bottom, end: left, tileCount: tileWidth },   // front-left
         ];
 
-        // Only draw entrance if it's on a visible front wall (2=front-right, 3=front-left)
-        // Back walls (0=back-left, 1=back-right) face away from camera
-        if (actualWall === 2 || actualWall === 3) {
-            const wall = walls[actualWall];
+        // Only draw entrance if it's on a visible front wall
+        // Visible walls depend on camera rotation
+        const visibleWalls = this.getVisibleWalls();
+        if (visibleWalls.includes(actualWall)) {
+            const wall = entranceWalls[actualWall];
             const wallStart = wall.start;
             const wallEnd = wall.end;
             const wallTileCount = wall.tileCount;
@@ -2870,12 +3061,21 @@ export class Renderer {
         const anchorX = building.tileX;
         const anchorY = building.tileY;
 
-        // Calculate screen positions for the corners of the isometric footprint
-        // (same approach as drawShelter)
-        const topCorner = this.game.camera.tileToScreen(anchorX, anchorY);
-        const rightCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY);
-        const bottomCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1);
-        const leftCorner = this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1);
+        // Calculate all 4 corners in screen space (tileToScreen already applies camera rotation)
+        const corners = [
+            this.game.camera.tileToScreen(anchorX, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1),
+            this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1),
+        ];
+
+        // Sort corners by screen position to find top/right/bottom/left
+        const sortedByY = [...corners].sort((a, b) => a.y - b.y);
+        const sortedByX = [...corners].sort((a, b) => a.x - b.x);
+        const topCorner = sortedByY[0];
+        const bottomCorner = sortedByY[3];
+        const leftCorner = sortedByX[0];
+        const rightCorner = sortedByX[3];
 
         // Calculate corner positions (extend to tile edges)
         const top = { x: topCorner.x, y: topCorner.y - hh };
@@ -2885,27 +3085,31 @@ export class Renderer {
 
         const buildingHeight = 45;
 
+        // Convert building rotation to screen-space entrance wall
+        // Building rotation gives world wall, add camera rotation to get screen wall
+        const screenRotation = (building.rotation + this.game.camera.rotation) % 4;
+
         // Draw based on building style
         if (config.style === 'burger_stand') {
-            this.drawBurgerStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawBurgerStand(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'drink_stand') {
-            this.drawDrinkStand(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawDrinkStand(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'vending_machine') {
-            this.drawVendingMachine(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawVendingMachine(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'gift_shop') {
-            this.drawGiftShop(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawGiftShop(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'restaurant') {
-            this.drawRestaurant(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawRestaurant(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'bathroom') {
-            this.drawBathroom(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawBathroom(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'bathroom_large') {
-            this.drawBathroomLarge(graphics, top, right, bottom, left, buildingHeight, building.rotation);
+            this.drawBathroomLarge(graphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (config.style === 'garbage_can') {
-            this.drawTrashCan(graphics, top, right, bottom, left, building.rotation);
+            this.drawTrashCan(graphics, top, right, bottom, left, screenRotation);
         } else if (config.style === 'bench') {
-            this.drawBench(graphics, top, right, bottom, left, building.rotation);
+            this.drawBench(graphics, top, right, bottom, left, screenRotation);
         } else if (config.style === 'picnic_table') {
-            this.drawPicnicTable(graphics, top, right, bottom, left, building.rotation);
+            this.drawPicnicTable(graphics, top, right, bottom, left, screenRotation);
         } else {
             // Default building style
             this.drawGenericBuilding(graphics, top, right, bottom, left, buildingHeight);
@@ -4986,7 +5190,9 @@ export class Renderer {
             west: { x1: screenPos.x, y1: screenPos.y + hh, x2: screenPos.x - hw, y2: screenPos.y },
         };
 
-        const e = edgePoints[edge.edge];
+        // Convert world edge to screen edge for proper visual rotation
+        const screenEdge = this.getScreenEdge(edge.edge);
+        const e = edgePoints[screenEdge];
 
         // Draw thick line for the edge
         this.overlayGraphics.moveTo(e.x1, e.y1);
@@ -5060,11 +5266,21 @@ export class Renderer {
         const hw = TILE_WIDTH / 2;
         const hh = TILE_HEIGHT / 2;
 
-        // Calculate screen positions for the corners (using last tile in each direction)
-        const topCorner = this.game.camera.tileToScreen(anchorX, anchorY);
-        const rightCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY);
-        const bottomCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1);
-        const leftCorner = this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1);
+        // Calculate all 4 corners in screen space (tileToScreen already applies camera rotation)
+        const corners = [
+            this.game.camera.tileToScreen(anchorX, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1),
+            this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1),
+        ];
+
+        // Sort corners by screen position to find top/right/bottom/left
+        const sortedByY = [...corners].sort((a, b) => a.y - b.y);
+        const sortedByX = [...corners].sort((a, b) => a.x - b.x);
+        const topCorner = sortedByY[0];
+        const bottomCorner = sortedByY[3];
+        const leftCorner = sortedByX[0];
+        const rightCorner = sortedByX[3];
 
         const shelterHeight = 30 + tileDepth * 8;
         const previewAlpha = 0.4;
@@ -5090,7 +5306,9 @@ export class Renderer {
         } else {
             baseWall = 2; // front-right (short side for small, at edge for regular)
         }
-        const actualWall = (baseWall + rotation) % 4;
+        // Apply building rotation to get world wall, then convert to screen wall
+        const worldWall = (baseWall + rotation) % 4;
+        const actualWall = (worldWall + this.game.camera.rotation) % 4;
 
         // Wall colors: entrance wall is darker
         const wallColors = [previewColor, previewColor, previewColor, previewColor];
@@ -5147,11 +5365,21 @@ export class Renderer {
         const hw = TILE_WIDTH / 2;
         const hh = TILE_HEIGHT / 2;
 
-        // Calculate screen positions for the corners
-        const topCorner = this.game.camera.tileToScreen(anchorX, anchorY);
-        const rightCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY);
-        const bottomCorner = this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1);
-        const leftCorner = this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1);
+        // Calculate all 4 corners in screen space (tileToScreen already applies camera rotation)
+        const corners = [
+            this.game.camera.tileToScreen(anchorX, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY),
+            this.game.camera.tileToScreen(anchorX + tileWidth - 1, anchorY + tileDepth - 1),
+            this.game.camera.tileToScreen(anchorX, anchorY + tileDepth - 1),
+        ];
+
+        // Sort corners by screen position to find top/right/bottom/left
+        const sortedByY = [...corners].sort((a, b) => a.y - b.y);
+        const sortedByX = [...corners].sort((a, b) => a.x - b.x);
+        const topCorner = sortedByY[0];
+        const bottomCorner = sortedByY[3];
+        const leftCorner = sortedByX[0];
+        const rightCorner = sortedByX[3];
 
         // Calculate corner positions
         const top = { x: topCorner.x, y: topCorner.y - hh };
@@ -5164,27 +5392,30 @@ export class Renderer {
         // Set transparency for preview
         this.overlayGraphics.alpha = 0.5;
 
+        // Convert building rotation to screen-space entrance wall
+        const screenRotation = (rotation + this.game.camera.rotation) % 4;
+
         // Use the actual detailed building drawing methods
         if (buildingType === 'burger_stand') {
-            this.drawBurgerStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawBurgerStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'drink_stand') {
-            this.drawDrinkStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawDrinkStand(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'vending_machine') {
-            this.drawVendingMachine(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawVendingMachine(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'gift_shop') {
-            this.drawGiftShop(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawGiftShop(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'restaurant') {
-            this.drawRestaurant(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawRestaurant(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'bathroom') {
-            this.drawBathroom(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawBathroom(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'bathroom_large') {
-            this.drawBathroomLarge(this.overlayGraphics, top, right, bottom, left, buildingHeight, rotation);
+            this.drawBathroomLarge(this.overlayGraphics, top, right, bottom, left, buildingHeight, screenRotation);
         } else if (buildingType === 'garbage_can') {
-            this.drawTrashCan(this.overlayGraphics, top, right, bottom, left, rotation);
+            this.drawTrashCan(this.overlayGraphics, top, right, bottom, left, screenRotation);
         } else if (buildingType === 'bench') {
-            this.drawBench(this.overlayGraphics, top, right, bottom, left, rotation);
+            this.drawBench(this.overlayGraphics, top, right, bottom, left, screenRotation);
         } else if (buildingType === 'picnic_table') {
-            this.drawPicnicTable(this.overlayGraphics, top, right, bottom, left, rotation);
+            this.drawPicnicTable(this.overlayGraphics, top, right, bottom, left, screenRotation);
         } else {
             // Generic building preview for other types
             this.drawGenericBuilding(this.overlayGraphics, top, right, bottom, left, buildingHeight);

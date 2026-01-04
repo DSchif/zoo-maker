@@ -368,6 +368,18 @@ export class InputHandler {
             }
         });
 
+        // Camera rotation buttons
+        const rotateCWBtn = document.getElementById('rotate-cw-btn');
+        const rotateCCWBtn = document.getElementById('rotate-ccw-btn');
+
+        rotateCWBtn?.addEventListener('click', () => {
+            this.game.camera.rotateClockwise();
+        });
+
+        rotateCCWBtn?.addEventListener('click', () => {
+            this.game.camera.rotateCounterClockwise();
+        });
+
         // Grid toggle
         const showGridToggle = document.getElementById('show-grid-toggle') as HTMLInputElement;
         showGridToggle?.addEventListener('change', () => {
@@ -2871,6 +2883,14 @@ export class InputHandler {
             case 'r':
             case 'R':
                 this.rotatePlacement();
+                break;
+            case 'q':
+            case 'Q':
+                this.game.camera.rotateCounterClockwise();
+                break;
+            case 'e':
+            case 'E':
+                this.game.camera.rotateClockwise();
                 break;
             case '1':
                 this.selectTool('select');

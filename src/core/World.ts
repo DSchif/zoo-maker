@@ -432,6 +432,15 @@ export class World {
     }
 
     /**
+     * Mark all chunks as dirty (for camera rotation)
+     */
+    markAllChunksDirty(): void {
+        for (const chunk of this.chunks.values()) {
+            chunk.dirty = true;
+        }
+    }
+
+    /**
      * Get entrance position
      */
     getEntrancePosition(): GridPos {

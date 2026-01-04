@@ -175,6 +175,12 @@ export class Game {
         const entrance = this.world.getEntrancePosition();
         this.camera.centerOnTile(entrance.x, entrance.y - 8);
 
+        // Set up camera rotation (world dimensions needed for rotation transforms)
+        this.camera.setWorldDimensions(this.world.width, this.world.height);
+        this.camera.onRotationChange = () => {
+            this.world.markAllChunksDirty();
+        };
+
         // Handle resize
         window.addEventListener('resize', () => this.handleResize());
 

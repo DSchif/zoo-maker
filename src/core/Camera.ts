@@ -25,9 +25,89 @@ export class Camera {
     private panStartCamX: number = 0;
     private panStartCamY: number = 0;
 
+    // Camera rotation: 0 = 0°, 1 = 90° CW, 2 = 180°, 3 = 270° CW
+    public rotation: 0 | 1 | 2 | 3 = 0;
+
+    // World dimensions (needed for rotation transforms)
+    private worldWidth: number = 64;
+    private worldHeight: number = 64;
+
+    // Callback for when rotation changes (to invalidate chunks, etc.)
+    public onRotationChange?: () => void;
+
     constructor(viewportWidth: number, viewportHeight: number) {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
+    }
+
+    /**
+     * Set world dimensions (call after world is created)
+     */
+    setWorldDimensions(width: number, height: number): void {
+        this.worldWidth = width;
+        this.worldHeight = height;
+    }
+
+    /**
+     * Transform world coordinates to view coordinates based on rotation
+     */
+    rotateWorldToView(worldX: number, worldY: number): { x: number; y: number } {
+        const maxX = this.worldWidth - 1;
+        const maxY = this.worldHeight - 1;
+
+        switch (this.rotation) {
+            case 0: return { x: worldX, y: worldY };
+            case 1: return { x: maxY - worldY, y: worldX };
+            case 2: return { x: maxX - worldX, y: maxY - worldY };
+            case 3: return { x: worldY, y: maxX - worldX };
+        }
+    }
+
+    /**
+     * Transform view coordinates back to world coordinates (inverse of rotateWorldToView)
+     */
+    rotateViewToWorld(viewX: number, viewY: number): { x: number; y: number } {
+        const maxX = this.worldWidth - 1;
+        const maxY = this.worldHeight - 1;
+
+        switch (this.rotation) {
+            case 0: return { x: viewX, y: viewY };
+            case 1: return { x: viewY, y: maxY - viewX };
+            case 2: return { x: maxX - viewX, y: maxY - viewY };
+            case 3: return { x: maxX - viewY, y: viewX };
+        }
+    }
+
+    /**
+     * Rotate camera clockwise (90° CW)
+     */
+    rotateClockwise(): void {
+        // Find the world tile at the center of the screen before rotation
+        const centerTile = this.screenToTile(this.viewportWidth / 2, this.viewportHeight / 2);
+
+        // Apply rotation
+        this.rotation = ((this.rotation + 1) % 4) as 0 | 1 | 2 | 3;
+
+        // Re-center on the same world tile after rotation
+        this.centerOnTile(centerTile.x, centerTile.y);
+
+        this.onRotationChange?.();
+    }
+
+    /**
+     * Rotate camera counter-clockwise (90° CCW)
+     */
+    rotateCounterClockwise(): void {
+        // Find the world tile at the center of the screen before rotation
+        const centerTile = this.screenToTile(this.viewportWidth / 2, this.viewportHeight / 2);
+
+        // Apply rotation
+        this.rotation = ((this.rotation + 3) % 4) as 0 | 1 | 2 | 3;
+
+        // Re-center on the same world tile after rotation
+        this.centerOnTile(centerTile.x, centerTile.y);
+
+        this.onRotationChange?.();
     }
 
     /**
@@ -49,30 +129,37 @@ export class Camera {
 
     /**
      * Convert logical grid coordinates to screen coordinates
-     * This is the isometric projection formula
+     * This is the isometric projection formula with rotation applied
      */
     tileToScreen(tileX: number, tileY: number): ScreenPos {
+        // Rotate world coords to view coords
+        const view = this.rotateWorldToView(tileX, tileY);
+
         return {
-            x: (tileX - tileY) * (ISO.TILE_WIDTH / 2),
-            y: (tileX + tileY) * (ISO.TILE_HEIGHT / 2),
+            x: (view.x - view.y) * (ISO.TILE_WIDTH / 2),
+            y: (view.x + view.y) * (ISO.TILE_HEIGHT / 2),
         };
     }
 
     /**
      * Convert screen coordinates to logical grid coordinates
-     * Inverse of the isometric projection
+     * Inverse of the isometric projection with rotation applied
      */
     screenToTile(screenX: number, screenY: number): GridPos {
-        // First convert from viewport to world coordinates
-        const worldX = (screenX - this.viewportWidth / 2) / this.zoom + this.x;
-        // Offset Y to align picking with tile visual center
-        const worldY = (screenY - this.viewportHeight / 2) / this.zoom + this.y + ISO.TILE_HEIGHT / 2;
+        // First convert from viewport to isometric world coordinates
+        const isoX = (screenX - this.viewportWidth / 2) / this.zoom + this.x;
+        const isoY = (screenY - this.viewportHeight / 2) / this.zoom + this.y;
 
-        // Then convert from isometric to grid
-        const tileX = (worldX / (ISO.TILE_WIDTH / 2) + worldY / (ISO.TILE_HEIGHT / 2)) / 2;
-        const tileY = (worldY / (ISO.TILE_HEIGHT / 2) - worldX / (ISO.TILE_WIDTH / 2)) / 2;
+        // Then convert from isometric to view-space grid coords
+        const viewX = (isoX / (ISO.TILE_WIDTH / 2) + isoY / (ISO.TILE_HEIGHT / 2)) / 2;
+        const viewY = (isoY / (ISO.TILE_HEIGHT / 2) - isoX / (ISO.TILE_WIDTH / 2)) / 2;
 
-        return { x: tileX, y: tileY };
+        // Rotate view coords back to world coords
+        const world = this.rotateViewToWorld(viewX, viewY);
+
+        // Offset in world-space to align picking with tile visual center
+        // The tile center is at (0.5, 0.5) offset from the anchor in grid space
+        return { x: world.x + 0.5, y: world.y + 0.5 };
     }
 
     /**

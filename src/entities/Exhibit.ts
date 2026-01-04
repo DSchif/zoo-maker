@@ -229,13 +229,18 @@ export function checkForEnclosure(
 
 /**
  * Get tiles adjacent to a fence edge
+ * Based on isometric edge mapping from World.ts:
+ * - North edge blocks -X movement (between tile and tile at x-1)
+ * - South edge blocks +X movement (between tile and tile at x+1)
+ * - East edge blocks -Y movement (between tile and tile at y-1)
+ * - West edge blocks +Y movement (between tile and tile at y+1)
  */
 function getAdjacentTiles(tileX: number, tileY: number, edge: EdgeDirection): GridPos[] {
     switch (edge) {
-        case 'north': return [{ x: tileX, y: tileY }, { x: tileX, y: tileY - 1 }];
-        case 'south': return [{ x: tileX, y: tileY }, { x: tileX, y: tileY + 1 }];
-        case 'east': return [{ x: tileX, y: tileY }, { x: tileX + 1, y: tileY }];
-        case 'west': return [{ x: tileX, y: tileY }, { x: tileX - 1, y: tileY }];
+        case 'north': return [{ x: tileX, y: tileY }, { x: tileX - 1, y: tileY }];
+        case 'south': return [{ x: tileX, y: tileY }, { x: tileX + 1, y: tileY }];
+        case 'east': return [{ x: tileX, y: tileY }, { x: tileX, y: tileY - 1 }];
+        case 'west': return [{ x: tileX, y: tileY }, { x: tileX, y: tileY + 1 }];
     }
 }
 
@@ -279,24 +284,35 @@ function floodFillEnclosure(
         interior.push(current);
 
         // Check all 4 directions
-        // The fenceEdge is the actual fence edge on the current tile that blocks movement
+        // Each direction has two possible fence locations:
+        // - fromEdge: fence on current tile blocking exit
+        // - toEdge: fence on neighbor tile blocking entry
         // Based on isMovementBlocked mapping:
-        // - north (dy=-1): 'east' edge blocks
-        // - south (dy=+1): 'west' edge blocks
-        // - east (dx=+1): 'south' edge blocks
-        // - west (dx=-1): 'north' edge blocks
-        const neighbors: Array<{ pos: GridPos; fenceEdge: EdgeDirection }> = [
-            { pos: { x: current.x, y: current.y - 1 }, fenceEdge: 'east' },   // north movement blocked by east edge
-            { pos: { x: current.x, y: current.y + 1 }, fenceEdge: 'west' },   // south movement blocked by west edge
-            { pos: { x: current.x + 1, y: current.y }, fenceEdge: 'south' },  // east movement blocked by south edge
-            { pos: { x: current.x - 1, y: current.y }, fenceEdge: 'north' },  // west movement blocked by north edge
+        // - north (dy=-1): current.east blocks exit, neighbor.west blocks entry
+        // - south (dy=+1): current.west blocks exit, neighbor.east blocks entry
+        // - east (dx=+1): current.south blocks exit, neighbor.north blocks entry
+        // - west (dx=-1): current.north blocks exit, neighbor.south blocks entry
+        const neighbors: Array<{ pos: GridPos; fromEdge: EdgeDirection; toEdge: EdgeDirection }> = [
+            { pos: { x: current.x, y: current.y - 1 }, fromEdge: 'east', toEdge: 'west' },   // north
+            { pos: { x: current.x, y: current.y + 1 }, fromEdge: 'west', toEdge: 'east' },   // south
+            { pos: { x: current.x + 1, y: current.y }, fromEdge: 'south', toEdge: 'north' }, // east
+            { pos: { x: current.x - 1, y: current.y }, fromEdge: 'north', toEdge: 'south' }, // west
         ];
 
         for (const neighbor of neighbors) {
             // Check if blocked by fence
             if (world.isMovementBlocked(current.x, current.y, neighbor.pos.x, neighbor.pos.y)) {
-                // Add to perimeter - use the actual fence edge that's blocking
-                perimeter.push({ tileX: current.x, tileY: current.y, edge: neighbor.fenceEdge });
+                // Add to perimeter - check BOTH tiles to find where fence actually is
+                // Fence could be on current tile (facing out) or neighbor tile (facing in)
+                const fenceOnCurrent = world.getFence(current.x, current.y, neighbor.fromEdge);
+                const fenceOnNeighbor = world.getFence(neighbor.pos.x, neighbor.pos.y, neighbor.toEdge);
+
+                if (fenceOnCurrent) {
+                    perimeter.push({ tileX: current.x, tileY: current.y, edge: neighbor.fromEdge });
+                }
+                if (fenceOnNeighbor) {
+                    perimeter.push({ tileX: neighbor.pos.x, tileY: neighbor.pos.y, edge: neighbor.toEdge });
+                }
             } else {
                 // Can move there, add to queue
                 if (!visited.has(getKey(neighbor.pos.x, neighbor.pos.y))) {

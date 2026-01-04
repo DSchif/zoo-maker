@@ -3673,18 +3673,9 @@ export class InputHandler {
         if (firstLegAlongY) {
             // First leg: along Y axis (same X, varying Y)
             // Use north/south edges (they connect visually along Y)
-            const minY = Math.min(startY, endY);
-            const maxY = Math.max(startY, endY);
-
-            for (let y = minY; y <= maxY; y++) {
-                edges.push({ tileX: startX, tileY: y, edge: startEdge });
-            }
 
             // Second leg: along X axis (same Y, varying X) if needed
             if (startX !== endX) {
-                const minX = Math.min(startX, endX);
-                const maxX = Math.max(startX, endX);
-
                 // Determine turn direction for consistent fence side
                 const firstLegPositive = endY > startY;
                 const secondLegPositive = endX > startX;
@@ -3698,28 +3689,55 @@ export class InputHandler {
                     secondEdge = turnLeft ? 'east' : 'west';
                 }
 
-                for (let x = minX; x <= maxX; x++) {
-                    if (x === startX) continue; // Skip corner (already has first leg edge)
-                    edges.push({ tileX: x, tileY: endY, edge: secondEdge });
+                const yStep = endY > startY ? 1 : -1;
+                const xStep = endX > startX ? 1 : -1;
+
+                // Outside corner: edge direction matches second leg direction
+                // North edge faces west, south edge faces east
+                // If second leg goes same direction as edge faces → outside corner
+                const secondLegGoesWest = xStep === -1;
+                const secondLegGoesEast = xStep === 1;
+                const isOutsideCorner = (startEdge === 'north' && secondLegGoesWest) ||
+                                        (startEdge === 'south' && secondLegGoesEast);
+
+                if (isOutsideCorner) {
+                    console.log(`OUTSIDE corner: ${startEdge}+${secondEdge}, second leg goes ${secondLegGoesWest ? 'west' : 'east'}`);
+                    // Outside corner: corner tile has NO edges
+                    // First leg: stop BEFORE corner tile
+                    for (let y = startY; y !== endY; y += yStep) {
+                        edges.push({ tileX: startX, tileY: y, edge: startEdge });
+                    }
+                    // Second leg: start AFTER corner tile
+                    for (let x = startX + xStep; x !== endX + xStep; x += xStep) {
+                        edges.push({ tileX: x, tileY: endY, edge: secondEdge });
+                    }
+                    // NO edges on corner tile
+                } else {
+                    // Inside corner: edges meet at corner tile
+                    // First leg: includes corner
+                    for (let y = startY; y !== endY + yStep; y += yStep) {
+                        edges.push({ tileX: startX, tileY: y, edge: startEdge });
+                    }
+                    // Second leg: from corner+1 to end
+                    for (let x = startX + xStep; x !== endX + xStep; x += xStep) {
+                        edges.push({ tileX: x, tileY: endY, edge: secondEdge });
+                    }
+                    // Add corner's perpendicular edge for L connection
+                    edges.push({ tileX: startX, tileY: endY, edge: secondEdge });
                 }
-                // Add corner's perpendicular edge for L connection
-                edges.push({ tileX: startX, tileY: endY, edge: secondEdge });
+            } else {
+                // Straight line along Y
+                const yStep = endY > startY ? 1 : -1;
+                for (let y = startY; y !== endY + yStep; y += yStep) {
+                    edges.push({ tileX: startX, tileY: y, edge: startEdge });
+                }
             }
         } else {
             // First leg: along X axis (same Y, varying X)
             // Use east/west edges (they connect visually along X)
-            const minX = Math.min(startX, endX);
-            const maxX = Math.max(startX, endX);
-
-            for (let x = minX; x <= maxX; x++) {
-                edges.push({ tileX: x, tileY: startY, edge: startEdge });
-            }
 
             // Second leg: along Y axis (same X, varying Y) if needed
             if (startY !== endY) {
-                const minY = Math.min(startY, endY);
-                const maxY = Math.max(startY, endY);
-
                 // Determine turn direction
                 const firstLegPositive = endX > startX;
                 const secondLegPositive = endY > startY;
@@ -3733,12 +3751,48 @@ export class InputHandler {
                     secondEdge = turnLeft ? 'south' : 'north';
                 }
 
-                for (let y = minY; y <= maxY; y++) {
-                    if (y === startY) continue; // Skip corner
-                    edges.push({ tileX: endX, tileY: y, edge: secondEdge });
+                const xStep = endX > startX ? 1 : -1;
+                const yStep = endY > startY ? 1 : -1;
+
+                // Outside corner: edge direction matches second leg direction
+                // East edge faces north, west edge faces south
+                // If second leg goes same direction as edge faces → outside corner
+                const secondLegGoesNorth = yStep === -1;
+                const secondLegGoesSouth = yStep === 1;
+                const isOutsideCorner = (startEdge === 'east' && secondLegGoesNorth) ||
+                                        (startEdge === 'west' && secondLegGoesSouth);
+
+                if (isOutsideCorner) {
+                    console.log(`OUTSIDE corner (X-first): ${startEdge}+${secondEdge}, second leg goes ${secondLegGoesNorth ? 'north' : 'south'}`);
+                    // Outside corner: corner tile has NO edges
+                    // First leg: stop BEFORE corner tile
+                    for (let x = startX; x !== endX; x += xStep) {
+                        edges.push({ tileX: x, tileY: startY, edge: startEdge });
+                    }
+                    // Second leg: start AFTER corner tile
+                    for (let y = startY + yStep; y !== endY + yStep; y += yStep) {
+                        edges.push({ tileX: endX, tileY: y, edge: secondEdge });
+                    }
+                    // NO edges on corner tile
+                } else {
+                    // Inside corner: edges meet at corner tile
+                    // First leg: includes corner
+                    for (let x = startX; x !== endX + xStep; x += xStep) {
+                        edges.push({ tileX: x, tileY: startY, edge: startEdge });
+                    }
+                    // Second leg: from corner+1 to end
+                    for (let y = startY + yStep; y !== endY + yStep; y += yStep) {
+                        edges.push({ tileX: endX, tileY: y, edge: secondEdge });
+                    }
+                    // Add corner's perpendicular edge for L connection
+                    edges.push({ tileX: endX, tileY: startY, edge: secondEdge });
                 }
-                // Add corner's perpendicular edge for L connection
-                edges.push({ tileX: endX, tileY: startY, edge: secondEdge });
+            } else {
+                // Straight line along X
+                const xStep = endX > startX ? 1 : -1;
+                for (let x = startX; x !== endX + xStep; x += xStep) {
+                    edges.push({ tileX: x, tileY: startY, edge: startEdge });
+                }
             }
         }
 

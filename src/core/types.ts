@@ -147,7 +147,26 @@ export type FoliageType =
     | 'norfolk_island_pine'
     | 'club_moss'
     | 'walchian_conifer'
-    | 'lepidodendron';
+    | 'lepidodendron'
+    // Rainforest biome
+    | 'rainforest_bush'
+    | 'rainforest_fern'
+    | 'rainforest_stump'
+    | 'rafflesia'
+    | 'fern_bush'
+    | 'giant_ficus_tree'
+    | 'foxtail_palm_tree'
+    | 'ulmo_tree'
+    | 'fallen_rainforest_tree'
+    | 'orchid_tree'
+    | 'durian_tree'
+    | 'leptocycas_tree'
+    | 'thouarsus_cycad_tree'
+    | 'mangrove_tree'
+    | 'llala_palm_tree'
+    | 'elephant_ear_tree'
+    | 'williamsonia_tree'
+    | 'kapok_tree';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

@@ -719,6 +719,16 @@ export class InputHandler {
                 { id: 'snowy_tree', name: 'Snowy Tree', cost: 110, icon: '🌲', biome: 'snow' },
                 { id: 'arctic_bush', name: 'Arctic Bush', cost: 150, icon: '❄️', biome: 'snow' },
                 { id: 'arctic_birch_tree', name: 'Arctic Birch Tree', cost: 200, icon: '🌳', biome: 'snow' },
+                // Desert (sand)
+                { id: 'sand_bush', name: 'Sand Bush', cost: 60, icon: '🌿', biome: 'sand' },
+                { id: 'agave_cactus', name: 'Agave Cactus', cost: 75, icon: '🌵', biome: 'sand' },
+                { id: 'palm_tree', name: 'Palm Tree', cost: 75, icon: '🌴', biome: 'sand' },
+                { id: 'saguaro_cactus', name: 'Saguaro Cactus', cost: 80, icon: '🌵', biome: 'sand' },
+                { id: 'yucca_tree', name: 'Yucca Tree', cost: 115, icon: '🌴', biome: 'sand' },
+                { id: 'prickly_pear_cactus', name: 'Prickly Pear Cactus', cost: 125, icon: '🌵', biome: 'sand' },
+                { id: 'joshua_tree', name: 'Joshua Tree', cost: 125, icon: '🌴', biome: 'sand' },
+                { id: 'doum_palm_tree', name: 'Doum Palm Tree', cost: 150, icon: '🌴', biome: 'sand' },
+                { id: 'quiver_tree', name: 'Quiver Tree', cost: 210, icon: '🌳', biome: 'sand' },
             ],
             shelter: [
                 { id: 'concrete_small', name: 'Small Shelter (2x1)', cost: 500, icon: '🏠' },
@@ -852,6 +862,7 @@ export class InputHandler {
             rainforest: '🌴',
             gray_stone: '🏔️',
             snow: '❄️',
+            sand: '🏜️',
             temperate: '🌲',
             tundra: '❄️',
         };

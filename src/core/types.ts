@@ -181,7 +181,17 @@ export type FoliageType =
     | 'arctic_grass'
     | 'snowy_tree'
     | 'arctic_bush'
-    | 'arctic_birch_tree';
+    | 'arctic_birch_tree'
+    // Desert biome (sand)
+    | 'sand_bush'
+    | 'agave_cactus'
+    | 'palm_tree'
+    | 'saguaro_cactus'
+    | 'yucca_tree'
+    | 'prickly_pear_cactus'
+    | 'joshua_tree'
+    | 'doum_palm_tree'
+    | 'quiver_tree';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

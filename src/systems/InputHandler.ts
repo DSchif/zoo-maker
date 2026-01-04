@@ -1511,6 +1511,7 @@ export class InputHandler {
         updateBar('selected-guest-hunger-bar', 'selected-guest-hunger-value', guest.hunger || 0);
         updateBar('selected-guest-thirst-bar', 'selected-guest-thirst-value', guest.thirst || 0);
         updateBar('selected-guest-energy-bar', 'selected-guest-energy-value', guest.energy || 0);
+        updateBar('selected-guest-bladder-bar', 'selected-guest-bladder-value', guest.bladder || 0);
 
         // Update happiness breakdown
         const factors = guest.happinessFactors || {};
@@ -3288,6 +3289,9 @@ export class InputHandler {
         // Can't place paths on water
         if (tile.terrain === 'water') return;
 
+        // Can't place paths under buildings
+        if (this.game.getPlaceableAtTile(x, y)) return;
+
         const previousPath = tile.path || null;
 
         // Don't place if it's the same path
@@ -3763,6 +3767,9 @@ export class InputHandler {
             const existingFence = this.game.world.getFence(edge.tileX, edge.tileY, edge.edge);
             if (existingFence) continue;
 
+            // Skip if fence would be on or adjacent to a building
+            if (this.isFenceBlockedByBuilding(edge.tileX, edge.tileY, edge.edge)) continue;
+
             if (this.game.spendMoney(cost)) {
                 this.game.world.setFence(edge.tileX, edge.tileY, edge.edge, fenceType as FenceType);
                 this.game.initializeFenceCondition(edge.tileX, edge.tileY, edge.edge);
@@ -3792,6 +3799,32 @@ export class InputHandler {
         }
 
         this.game.pathfinding.updateWorld(this.game.world);
+    }
+
+    /**
+     * Check if a fence edge would be blocked by a building
+     * Returns true if either the tile with the fence or the adjacent tile has a building
+     */
+    private isFenceBlockedByBuilding(tileX: number, tileY: number, edge: EdgeDirection): boolean {
+        // Check if the tile itself has a building
+        if (this.game.getPlaceableAtTile(tileX, tileY)) return true;
+
+        // Get the adjacent tile based on edge direction
+        const adjacentOffsets: Record<EdgeDirection, { dx: number; dy: number }> = {
+            north: { dx: -1, dy: 0 },
+            south: { dx: 1, dy: 0 },
+            east: { dx: 0, dy: -1 },
+            west: { dx: 0, dy: 1 },
+        };
+
+        const offset = adjacentOffsets[edge];
+        const adjacentX = tileX + offset.dx;
+        const adjacentY = tileY + offset.dy;
+
+        // Check if the adjacent tile has a building
+        if (this.game.getPlaceableAtTile(adjacentX, adjacentY)) return true;
+
+        return false;
     }
 
     /**
@@ -3854,6 +3887,9 @@ export class InputHandler {
 
             // Can't place paths on water
             if (existingTile.terrain === 'water') continue;
+
+            // Can't place paths under buildings
+            if (this.game.getPlaceableAtTile(tile.x, tile.y)) continue;
 
             const previousPath = existingTile.path || null;
 
@@ -4203,6 +4239,9 @@ export class InputHandler {
                     const existingFence = this.game.world.getFence(edge.tileX, edge.tileY, edge.edge);
                     if (existingFence) continue;
 
+                    // Skip if fence would be on or adjacent to a building
+                    if (this.isFenceBlockedByBuilding(edge.tileX, edge.tileY, edge.edge)) continue;
+
                     if (this.game.spendMoney(cost)) {
                         this.game.world.setFence(edge.tileX, edge.tileY, edge.edge, fenceType);
                         this.game.initializeFenceCondition(edge.tileX, edge.tileY, edge.edge);
@@ -4229,6 +4268,10 @@ export class InputHandler {
             if (pathType) {
                 const tiles = this.calculateLShapeTiles(this.touchPathStart, this.touchPathEnd);
                 for (const tile of tiles) {
+                    const existingTile = this.game.world.getTile(tile.x, tile.y);
+                    if (!existingTile) continue;
+                    if (existingTile.terrain === 'water') continue;
+                    if (this.game.getPlaceableAtTile(tile.x, tile.y)) continue;
                     this.game.world.setPath(tile.x, tile.y, pathType);
                 }
             }

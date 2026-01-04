@@ -771,6 +771,9 @@ export class Game {
         const currentUsage = this.getTileSpaceUsage(tileX, tileY);
         if (!Foliage.hasSpaceOnTile(foliageType, currentUsage)) return null;
 
+        // Can't place foliage on buildings
+        if (this.getPlaceableAtTile(tileX, tileY)) return null;
+
         const foliageItem = new Foliage(this, tileX, tileY, foliageType);
         this.foliage.push(foliageItem);
         return foliageItem;

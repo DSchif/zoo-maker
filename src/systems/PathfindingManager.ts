@@ -121,20 +121,11 @@ export class PathfindingManager {
             }
 
             // Collect blocked tiles from all placeables (shelters, buildings)
-            // Exclude tiles that have interaction points (entrances)
+            // Block ALL occupied tiles - guests path to approach tiles (outside buildings),
+            // then walk directly inside via the entering_building state
             for (const placeable of this.game.getAllPlaceables()) {
-                // Get all interaction point world positions
-                const interactionTiles = new Set<string>();
-                for (const interaction of placeable.getInteractionPoints()) {
-                    interactionTiles.add(`${interaction.worldX},${interaction.worldY}`);
-                }
-
-                // Block all occupied tiles except interaction points
                 for (const tile of placeable.getOccupiedTiles()) {
-                    const tileKey = `${tile.x},${tile.y}`;
-                    if (!interactionTiles.has(tileKey)) {
-                        blockedTiles.push({ x: tile.x, y: tile.y });
-                    }
+                    blockedTiles.push({ x: tile.x, y: tile.y });
                 }
             }
         }
@@ -191,7 +182,8 @@ export class PathfindingManager {
         endX: number,
         endY: number,
         canUsePaths: boolean = true,
-        canPassGates: boolean = false
+        canPassGates: boolean = false,
+        maxOffPathDistance?: number
     ): Promise<GridPos[]> {
         if (!this.ready) {
             await this.readyPromise;
@@ -209,6 +201,7 @@ export class PathfindingManager {
                 endY,
                 canUsePaths,
                 canPassGates,
+                maxOffPathDistance,
             };
 
             this.pendingRequests.set(id, (response) => {

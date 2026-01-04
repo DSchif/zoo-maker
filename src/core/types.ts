@@ -118,6 +118,7 @@ export interface PathRequest {
     endY: number;
     canUsePaths: boolean;  // Staff can, animals can't
     canPassGates: boolean; // Staff can, animals can't
+    maxOffPathDistance?: number; // Max tiles away from a path (for guests)
 }
 
 export interface PathResponse {
@@ -178,6 +179,27 @@ export type GuestNeed = 'hunger' | 'thirst' | 'energy' | 'bathroom' | 'fun' | 's
 // Entity types that can interact
 export type InteractingEntityType = 'animal' | 'guest' | 'staff';
 
+// Interaction behavior config - defines what happens when entity uses this interaction
+export interface InteractionBehavior {
+    // How long the entity stays (in seconds)
+    duration: { min: number; max: number };
+
+    // Does the entity disappear inside? (enters building)
+    entersBuilding?: boolean;
+
+    // Price charged to guest (revenue for the building)
+    price?: number;
+
+    // Stat effects to apply when interaction completes
+    effects?: {
+        hunger?: number;      // Amount to add (can be negative)
+        thirst?: number;
+        energy?: number;
+        bladder?: number;
+        happiness?: number;
+    };
+}
+
 // Interaction point definition (relative to anchor, before rotation)
 export interface InteractionPoint {
     // Position relative to anchor tile (before rotation)
@@ -199,8 +221,11 @@ export interface InteractionPoint {
     // How to approach this interaction (default 'direct')
     approach?: ApproachType;
 
-    // What guest needs this interaction satisfies
+    // What guest needs this interaction satisfies (used for need-seeking)
     satisfies?: GuestNeed[];
+
+    // Behavior when guest uses this interaction
+    behavior?: InteractionBehavior;
 }
 
 // Placeable category
@@ -297,7 +322,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 75,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 2, approach: 'any', satisfies: ['energy'] }
+            {
+                relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south',
+                capacity: 2, approach: 'any', satisfies: ['energy'],
+                behavior: { duration: { min: 20, max: 40 }, effects: { energy: 30 } }
+            }
         ],
         style: 'bench'
     },
@@ -309,7 +338,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 150,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south', capacity: 4, approach: 'any', satisfies: ['energy'] }
+            {
+                relativeX: 0, relativeY: 0, type: 'sit', entities: ['guest'], facing: 'south',
+                capacity: 4, approach: 'any', satisfies: ['energy'],
+                behavior: { duration: { min: 30, max: 60 }, effects: { energy: 40 } }
+            }
         ],
         style: 'picnic_table'
     },
@@ -333,7 +366,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 1500,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south', capacity: 2, approach: 'facing', satisfies: ['bathroom'] }
+            {
+                relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south',
+                capacity: 2, approach: 'enter', satisfies: ['bathroom'],
+                behavior: { duration: { min: 8, max: 15 }, entersBuilding: true, effects: { bladder: 100, happiness: 10 } }
+            }
         ],
         style: 'bathroom'
     },
@@ -345,7 +382,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'amenity',
         cost: 2500,
         interactions: [
-            { relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south', capacity: 4, approach: 'facing', satisfies: ['bathroom'] }
+            {
+                relativeX: 0, relativeY: 0, type: 'enter', entities: ['guest'], facing: 'south',
+                capacity: 4, approach: 'enter', satisfies: ['bathroom'],
+                behavior: { duration: { min: 8, max: 15 }, entersBuilding: true, effects: { bladder: 100, happiness: 10 } }
+            }
         ],
         style: 'bathroom_large'
     },
@@ -358,11 +399,13 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         depth: 3,
         category: 'commercial',
         cost: 5000,
-        purchasePrice: 15,  // Average gift purchase price
+        purchasePrice: 15,
         interactions: [
-            // Guests enter and browse for ~30 seconds, may or may not purchase
-            // Entrance on right edge at rotation 0, facing outward (south = +X)
-            { relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south', approach: 'enter', capacity: 6, satisfies: ['shopping', 'fun'] }
+            {
+                relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south',
+                approach: 'enter', capacity: 6, satisfies: ['shopping', 'fun'],
+                behavior: { duration: { min: 25, max: 35 }, entersBuilding: true, price: 15, effects: { happiness: 20 } }
+            }
         ],
         style: 'gift_shop'
     },
@@ -374,8 +417,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         category: 'commercial',
         cost: 8000,
         interactions: [
-            // Entrance on right tile of the 2-tile side (front-right wall at rotation 0)
-            { relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south', approach: 'enter', capacity: 8, satisfies: ['hunger', 'thirst'] }
+            {
+                relativeX: 2, relativeY: 1, type: 'enter', entities: ['guest'], facing: 'south',
+                approach: 'enter', capacity: 8, satisfies: ['hunger', 'thirst'],
+                behavior: { duration: { min: 15, max: 25 }, entersBuilding: true, price: 12, effects: { hunger: 50, thirst: 40, happiness: 10 } }
+            }
         ],
         style: 'restaurant'
     },
@@ -436,9 +482,11 @@ export const PLACEABLE_CONFIGS: Record<string, PlaceableConfig> = {
         cost: 15000,
         purchasePrice: 10,
         interactions: [
-            // Main entrance
-            { relativeX: 2, relativeY: 2, type: 'enter', entities: ['guest'], facing: 'south', capacity: 5, approach: 'enter', satisfies: ['fun'] },
-            // Staff positions
+            {
+                relativeX: 2, relativeY: 2, type: 'enter', entities: ['guest'], facing: 'south',
+                capacity: 5, approach: 'enter', satisfies: ['fun'],
+                behavior: { duration: { min: 30, max: 60 }, entersBuilding: true, price: 10, effects: { happiness: 25 } }
+            },
             { relativeX: 0, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' },
             { relativeX: 3, relativeY: 0, type: 'work', entities: ['staff'], facing: 'south' }
         ],

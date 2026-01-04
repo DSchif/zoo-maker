@@ -38,12 +38,58 @@ let worldData: {
 // Set for fast blocked tile lookup
 let blockedTileSet: Set<string> = new Set();
 
+// Map for distance from nearest path (for guest pathfinding)
+let pathDistanceMap: Map<string, number> = new Map();
+
 // Rebuild the blocked tile set from world data
 function rebuildBlockedTileSet(): void {
     blockedTileSet.clear();
     if (worldData?.blockedTiles) {
         for (const tile of worldData.blockedTiles) {
             blockedTileSet.add(`${tile.x},${tile.y}`);
+        }
+    }
+}
+
+// Rebuild the path distance map using BFS from all path tiles
+function rebuildPathDistanceMap(): void {
+    pathDistanceMap.clear();
+    if (!worldData) return;
+
+    const queue: Array<{ x: number; y: number; dist: number }> = [];
+
+    // Find all path tiles and add them to queue with distance 0
+    for (let y = 0; y < worldData.height; y++) {
+        for (let x = 0; x < worldData.width; x++) {
+            const tile = worldData.tiles[y]?.[x];
+            if (tile?.path) {
+                pathDistanceMap.set(`${x},${y}`, 0);
+                queue.push({ x, y, dist: 0 });
+            }
+        }
+    }
+
+    // BFS to compute distance from nearest path for all reachable tiles
+    const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    let head = 0;
+
+    while (head < queue.length) {
+        const { x, y, dist } = queue[head++];
+
+        for (const [dx, dy] of directions) {
+            const nx = x + dx;
+            const ny = y + dy;
+            const key = `${nx},${ny}`;
+
+            // Skip if already visited or out of bounds
+            if (pathDistanceMap.has(key)) continue;
+            if (nx < 0 || nx >= worldData.width || ny < 0 || ny >= worldData.height) continue;
+
+            const tile = worldData.tiles[ny]?.[nx];
+            if (!tile || tile.terrain === 'water') continue;
+
+            pathDistanceMap.set(key, dist + 1);
+            queue.push({ x: nx, y: ny, dist: dist + 1 });
         }
     }
 }
@@ -57,6 +103,7 @@ self.onmessage = (e: MessageEvent) => {
             // Initialize world data
             worldData = data;
             rebuildBlockedTileSet();
+            rebuildPathDistanceMap();
             self.postMessage({ type: 'ready' });
             break;
 
@@ -64,6 +111,7 @@ self.onmessage = (e: MessageEvent) => {
             // Update world data (for incremental updates)
             worldData = data;
             rebuildBlockedTileSet();
+            rebuildPathDistanceMap();
             break;
 
         case 'findPath':
@@ -86,7 +134,7 @@ self.onmessage = (e: MessageEvent) => {
  * A* pathfinding algorithm
  */
 function findPath(request: PathRequest): PathResponse {
-    const { id, entityId, startX, startY, endX, endY, canUsePaths, canPassGates } = request;
+    const { id, entityId, startX, startY, endX, endY, canUsePaths, canPassGates, maxOffPathDistance } = request;
 
     // Quick validation
     if (!worldData) {
@@ -99,7 +147,8 @@ function findPath(request: PathRequest): PathResponse {
     }
 
     // Check if destination is valid (allow blocked tiles as destination - e.g., shelter entrances)
-    if (!isValidTile(endX, endY, canUsePaths, true)) {
+    // Also allow destinations beyond maxOffPathDistance (building entrances may be off-path)
+    if (!isValidTile(endX, endY, canUsePaths, true, maxOffPathDistance)) {
         return { id, entityId, path: [], success: false };
     }
 
@@ -138,9 +187,9 @@ function findPath(request: PathRequest): PathResponse {
             const neighborKey = getKey(neighbor.x, neighbor.y);
             if (closedSet.has(neighborKey)) continue;
 
-            // Check if we can move to this tile (allow destination even if blocked)
+            // Check if we can move to this tile (allow destination even if blocked/off-path)
             const isDestTile = neighbor.x === endX && neighbor.y === endY;
-            if (!isValidTile(neighbor.x, neighbor.y, canUsePaths, isDestTile)) continue;
+            if (!isValidTile(neighbor.x, neighbor.y, canUsePaths, isDestTile, maxOffPathDistance)) continue;
 
             // Check if movement is blocked by fence
             if (isMovementBlocked(current.x, current.y, neighbor.x, neighbor.y, canPassGates)) {
@@ -203,7 +252,13 @@ function getTile(x: number, y: number): TileData | null {
     return worldData.tiles[y]?.[x] ?? null;
 }
 
-function isValidTile(x: number, y: number, canUsePaths: boolean, isDestination: boolean = false): boolean {
+function isValidTile(
+    x: number,
+    y: number,
+    canUsePaths: boolean,
+    isDestination: boolean = false,
+    maxOffPathDistance?: number
+): boolean {
     const tile = getTile(x, y);
     if (!tile) return false;
     if (tile.terrain === 'water') return false;
@@ -214,6 +269,14 @@ function isValidTile(x: number, y: number, canUsePaths: boolean, isDestination: 
     // Check for blocked tiles (shelters/placeables)
     // Allow blocked tiles as destination (e.g., shelter entrances) but not for passing through
     if (!isDestination && blockedTileSet.has(`${x},${y}`)) return false;
+
+    // Check distance from path (for guests)
+    // Allow destination tiles even if beyond limit (e.g., building entrances just off path)
+    if (maxOffPathDistance !== undefined && !isDestination) {
+        const pathDist = pathDistanceMap.get(`${x},${y}`);
+        // If tile has no path distance (unreachable from any path), or is too far, reject
+        if (pathDist === undefined || pathDist > maxOffPathDistance) return false;
+    }
 
     return true;
 }

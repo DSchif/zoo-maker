@@ -339,6 +339,12 @@ export class Placeable {
         return this.config.interactions
             .map((interaction, index) => ({ ...interaction, index }))
             .filter(interaction => interaction.satisfies?.includes(need))
+            .filter(interaction => {
+                // Check if this interaction has available capacity
+                const capacity = interaction.capacity || 1;
+                const currentUsers = this.reservations.filter(r => r.interactionIndex === interaction.index).length;
+                return currentUsers < capacity;
+            })
             .map(interaction => {
                 const worldPos = this.transformRelativePosition(interaction.relativeX, interaction.relativeY);
                 return {
@@ -348,6 +354,38 @@ export class Placeable {
                     worldFacing: interaction.facing ? this.transformFacing(interaction.facing) : undefined,
                     placeable: this
                 };
+            })
+            .filter(interaction => {
+                // Check if the approach tile is accessible (not blocked by another building)
+                const approachTile = this.calculateApproachTile(interaction, 0, 0);
+
+                // Check if approach tile is blocked by water
+                const tile = this.game.world.getTile(approachTile.x, approachTile.y);
+                if (!tile || tile.terrain === 'water') return false;
+
+                // Check if approach tile is blocked by another placeable
+                const blockingPlaceable = this.game.getPlaceableAtTile(approachTile.x, approachTile.y);
+                if (blockingPlaceable && blockingPlaceable !== this) return false;
+
+                // Check if approach tile is reachable (on a path or within 2 tiles of a path)
+                // This prevents guests from targeting interactions they can't actually reach
+                if (!tile.path) {
+                    const maxDistance = 2;
+                    let nearPath = false;
+                    for (let dy = -maxDistance; dy <= maxDistance && !nearPath; dy++) {
+                        for (let dx = -maxDistance; dx <= maxDistance && !nearPath; dx++) {
+                            if (Math.abs(dx) + Math.abs(dy) <= maxDistance) {
+                                const checkTile = this.game.world.getTile(approachTile.x + dx, approachTile.y + dy);
+                                if (checkTile?.path) {
+                                    nearPath = true;
+                                }
+                            }
+                        }
+                    }
+                    if (!nearPath) return false;
+                }
+
+                return true;
             });
     }
 
@@ -488,33 +526,21 @@ export class Placeable {
                 if (!tile) return false;
                 if (tile.terrain === 'water') return false;
 
-                // Category-specific rules
-                if (config.category === 'exhibit') {
-                    // Exhibit items can't be on paths
-                    if (tile.path) return false;
-                } else if (config.category === 'amenity' || config.category === 'commercial') {
-                    // Amenities and commercial must be on or adjacent to paths
-                    // For now, just disallow water
-                }
+                // Buildings can't be placed on paths
+                if (tile.path) return false;
 
                 // Check for existing placeables
                 if (game.getPlaceableAtTile(x, y)) return false;
 
-                // Check for fences BETWEEN tiles in the placeable footprint
-                // Fences on exterior edges are OK (allows placement against exhibit perimeter)
-                // Only block if fence is on an edge facing another tile we're occupying
+                // Check for foliage at this tile
+                const foliageAtTile = game.getFoliageAtTile(x, y);
+                if (foliageAtTile.length > 0) return false;
 
-                // Check south edge (toward +X) - blocked if there's another tile at dx+1
-                if (tile.fences.south && dx < width - 1) return false;
-
-                // Check north edge (toward -X) - blocked if there's another tile at dx-1
-                if (tile.fences.north && dx > 0) return false;
-
-                // Check west edge (toward +Y) - blocked if there's another tile at dy+1
-                if (tile.fences.west && dy < depth - 1) return false;
-
-                // Check east edge (toward -Y) - blocked if there's another tile at dy-1
-                if (tile.fences.east && dy > 0) return false;
+                // Check for ANY fences on this tile's edges
+                // Buildings cannot be placed where fences exist
+                if (tile.fences.north || tile.fences.south || tile.fences.east || tile.fences.west) {
+                    return false;
+                }
             }
         }
 

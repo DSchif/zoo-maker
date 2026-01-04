@@ -628,8 +628,23 @@ export class InputHandler {
                 { id: 'maintenance', name: 'Maintenance', cost: 400, icon: '🔧' },
             ],
             foliage: [
-                { id: 'acacia', name: 'Acacia Tree', cost: 150, icon: '🌳', biome: 'savanna_grass' },
-                { id: 'tall_grass', name: 'Tall Grass', cost: 25, icon: '🌾', biome: 'savanna_grass' },
+                // Savannah - African
+                { id: 'thorn_bush', name: 'Thorn Bush', cost: 20, icon: '🌿', biome: 'savanna_grass' },
+                { id: 'tall_grass', name: 'Tall Grass', cost: 75, icon: '🌾', biome: 'savanna_grass' },
+                { id: 'senegal_date_palm', name: 'Senegal Date Palm', cost: 120, icon: '🌴', biome: 'savanna_grass' },
+                { id: 'acacia_caffra', name: 'Acacia Caffra', cost: 125, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'thorn_acacia', name: 'Thorn Acacia', cost: 150, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'yellow_fever_tree', name: 'Yellow Fever Tree', cost: 175, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'umbrella_thorn', name: 'Umbrella Thorn', cost: 210, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'baobab', name: 'Baobab Tree', cost: 300, icon: '🌳', biome: 'savanna_grass' },
+                // Savannah - Other regions
+                { id: 'khejri', name: 'Khejri Tree', cost: 165, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'sigillaria', name: 'Sigillaria Tree', cost: 150, icon: '🌴', biome: 'savanna_grass' },
+                { id: 'grass_tree', name: 'Grass Tree', cost: 125, icon: '🌴', biome: 'savanna_grass' },
+                { id: 'red_gum', name: 'Red Gum Tree', cost: 175, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'hard_quandong', name: 'Hard Quandong', cost: 200, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'eucalyptus', name: 'Eucalyptus Tree', cost: 225, icon: '🌳', biome: 'savanna_grass' },
+                // Prairie
                 { id: 'prairie_grass', name: 'Prairie Grass', cost: 20, icon: '🌿', biome: 'prairie' },
                 { id: 'shrub', name: 'Prairie Shrub', cost: 75, icon: '🌲', biome: 'prairie' },
                 { id: 'wildflowers', name: 'Wildflowers', cost: 30, icon: '🌸', biome: 'prairie' },
@@ -755,16 +770,30 @@ export class InputHandler {
             this.hideBuildingMenuInfo();
         }
 
-        // Build submenu HTML
-        let submenuHTML = items.map((item, index) => `
+        // Biome icons for display
+        const biomeIcons: Record<string, string> = {
+            savanna_grass: '🌾',
+            prairie: '🌿',
+            rainforest: '🌴',
+            temperate: '🌲',
+            tundra: '❄️',
+        };
+
+        // Build submenu HTML with scroll container
+        let submenuHTML = '<div class="submenu-scroll-container">';
+        submenuHTML += items.map((item, index) => {
+            const biomeIcon = item.biome ? biomeIcons[item.biome] || '' : '';
+            return `
             <div class="submenu-item ${index === 0 ? 'selected' : ''}" data-item="${item.id}">
                 <span class="icon">${item.icon}</span>
                 <div class="details">
                     <div class="name">${item.name}</div>
                     <div class="cost">$${item.cost}</div>
                 </div>
+                ${biomeIcon ? `<span class="biome-icon">${biomeIcon}</span>` : ''}
             </div>
-        `).join('');
+        `}).join('');
+        submenuHTML += '</div>';
 
         // Add brush size controls for terrain tool
         if (tool === 'terrain') {

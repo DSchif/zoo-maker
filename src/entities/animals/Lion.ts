@@ -22,7 +22,7 @@ export const LionInfo = {
     },
 
     foliageNeeds: {
-        acacia: 0.15,
+        umbrella_thorn: 0.15,
         tall_grass: 0.2,
     },
 

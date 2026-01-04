@@ -2957,6 +2957,555 @@ export class Renderer {
                 break;
             }
 
+            case 'thorn_bush': {
+                // Shadow
+                graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Main bush shape - gray-green spiny appearance
+                graphics.ellipse(x, y - 6 * scale, 16 * scale, 12 * scale);
+                graphics.fill(0x5a6b4a);
+
+                // Spiny texture clusters
+                const spineColors = [0x4a5b3a, 0x6a7b5a, 0x5a6b4a];
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i / 10) * Math.PI * 2;
+                    const dist = 6 + seededRandom(i) * 8;
+                    const sx = x + Math.cos(angle) * dist * scale;
+                    const sy = y - 6 * scale + Math.sin(angle) * dist * 0.6 * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 50) * spineColors.length);
+                    graphics.ellipse(sx, sy, 4 * scale, 3 * scale);
+                    graphics.fill(spineColors[colorIdx]);
+                }
+
+                // Thorns/spines sticking out
+                for (let i = 0; i < 8; i++) {
+                    const angle = seededRandom(i + 100) * Math.PI * 2;
+                    const dist = 12 + seededRandom(i + 101) * 4;
+                    const tx = x + Math.cos(angle) * dist * scale;
+                    const ty = y - 6 * scale + Math.sin(angle) * dist * 0.5 * scale;
+                    graphics.moveTo(x + Math.cos(angle) * 8 * scale, y - 6 * scale + Math.sin(angle) * 4 * scale);
+                    graphics.lineTo(tx, ty);
+                    graphics.stroke({ color: 0x3a3a2a, width: 1 });
+                }
+                break;
+            }
+
+            case 'senegal_date_palm': {
+                // Shadow
+                graphics.ellipse(x, y + 5, 20 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk - slender brown
+                const trunkHeight = 50 * scale;
+                graphics.rect(x - 3 * scale, y - trunkHeight + 10, 6 * scale, trunkHeight);
+                graphics.fill(0x6b4423);
+
+                // Trunk texture rings
+                for (let i = 0; i < 6; i++) {
+                    const ringY = y - 5 * scale - i * 8 * scale;
+                    graphics.moveTo(x - 3 * scale, ringY);
+                    graphics.lineTo(x + 3 * scale, ringY);
+                    graphics.stroke({ color: 0x5a3318, width: 1, alpha: 0.5 });
+                }
+
+                // Feathery fronds
+                const frondCount = 7;
+                for (let i = 0; i < frondCount; i++) {
+                    const angle = (i / frondCount) * Math.PI * 2 - Math.PI / 2;
+                    const frondLen = 22 * scale;
+                    const endX = x + Math.cos(angle) * frondLen;
+                    const endY = y - trunkHeight + 5 + Math.sin(angle) * frondLen * 0.4;
+
+                    // Frond stem
+                    graphics.moveTo(x, y - trunkHeight + 8);
+                    graphics.lineTo(endX, endY);
+                    graphics.stroke({ color: 0x3a5a2a, width: 2 * scale });
+
+                    // Leaflets along frond
+                    for (let j = 0; j < 5; j++) {
+                        const t = 0.3 + j * 0.15;
+                        const lx = x + (endX - x) * t;
+                        const ly = (y - trunkHeight + 8) + (endY - (y - trunkHeight + 8)) * t;
+                        const leafAngle = angle + Math.PI / 2;
+                        graphics.moveTo(lx, ly);
+                        graphics.lineTo(lx + Math.cos(leafAngle) * 4 * scale, ly + Math.sin(leafAngle) * 2 * scale);
+                        graphics.lineTo(lx - Math.cos(leafAngle) * 4 * scale, ly - Math.sin(leafAngle) * 2 * scale);
+                        graphics.stroke({ color: 0x4a7a3a, width: 1 });
+                    }
+                }
+                break;
+            }
+
+            case 'acacia_caffra': {
+                // Hook-thorn acacia - rounded crown
+                // Shadow
+                graphics.ellipse(x, y + 5, 26 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 4 * scale, y - 35 * scale, 8 * scale, 40 * scale);
+                graphics.fill(0x5D4037);
+
+                // Hook-like thorns on trunk
+                for (let i = 0; i < 4; i++) {
+                    const ty = y - 10 * scale - i * 8 * scale;
+                    graphics.moveTo(x - 4 * scale, ty);
+                    graphics.quadraticCurveTo(x - 10 * scale, ty - 3, x - 8 * scale, ty + 4);
+                    graphics.stroke({ color: 0x4a3328, width: 1.5 });
+                    graphics.moveTo(x + 4 * scale, ty + 4);
+                    graphics.quadraticCurveTo(x + 10 * scale, ty + 1, x + 8 * scale, ty + 8);
+                    graphics.stroke({ color: 0x4a3328, width: 1.5 });
+                }
+
+                // Rounded crown
+                graphics.ellipse(x, y - 48 * scale, 28 * scale, 20 * scale);
+                graphics.fill(0x3a6613);
+
+                // Leaf clusters
+                const leafColors = [0x4a7623, 0x5a8633, 0x3a6013];
+                for (let i = 0; i < 10; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 48 * scale;
+                    const ly = y - 48 * scale + (seededRandom(i + 10) - 0.5) * 32 * scale;
+                    const lsize = (5 + seededRandom(i + 20) * 5) * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 30) * leafColors.length);
+                    graphics.ellipse(lx, ly, lsize, lsize * 0.7);
+                    graphics.fill(leafColors[colorIdx]);
+                }
+                break;
+            }
+
+            case 'thorn_acacia': {
+                // White-barked thorny acacia
+                // Shadow
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Pale/white trunk
+                graphics.rect(x - 4 * scale, y - 38 * scale, 8 * scale, 43 * scale);
+                graphics.fill(0xd4c8b8);
+
+                // Bark texture - pale gray lines
+                for (let i = 0; i < 5; i++) {
+                    const barkY = y - 30 * scale + i * 8 * scale;
+                    graphics.moveTo(x - 3 * scale, barkY);
+                    graphics.lineTo(x + 2 * scale, barkY + 2);
+                    graphics.stroke({ color: 0xbab0a0, width: 1, alpha: 0.6 });
+                }
+
+                // Long paired thorns
+                for (let i = 0; i < 3; i++) {
+                    const ty = y - 15 * scale - i * 10 * scale;
+                    // Left thorn
+                    graphics.moveTo(x - 4 * scale, ty);
+                    graphics.lineTo(x - 14 * scale, ty - 2);
+                    graphics.stroke({ color: 0xe8e0d0, width: 1.5 });
+                    // Right thorn
+                    graphics.moveTo(x + 4 * scale, ty);
+                    graphics.lineTo(x + 14 * scale, ty - 2);
+                    graphics.stroke({ color: 0xe8e0d0, width: 1.5 });
+                }
+
+                // Crown
+                graphics.ellipse(x, y - 52 * scale, 26 * scale, 16 * scale);
+                graphics.fill(0x3a6613);
+
+                // Leaf texture
+                for (let i = 0; i < 8; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 44 * scale;
+                    const ly = y - 52 * scale + (seededRandom(i + 10) - 0.5) * 26 * scale;
+                    graphics.ellipse(lx, ly, 5 * scale, 3 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a7623 : 0x5a8633);
+                }
+                break;
+            }
+
+            case 'yellow_fever_tree': {
+                // Striking yellow-green bark
+                // Shadow
+                graphics.ellipse(x, y + 5, 28 * scale, 12 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Yellow-green trunk
+                graphics.rect(x - 5 * scale, y - 45 * scale, 10 * scale, 50 * scale);
+                graphics.fill(0xc4b82a);
+
+                // Trunk texture - greenish streaks
+                for (let i = 0; i < 6; i++) {
+                    const barkY = y - 35 * scale + i * 8 * scale;
+                    graphics.moveTo(x - 4 * scale, barkY);
+                    graphics.lineTo(x + 3 * scale, barkY + 3);
+                    graphics.stroke({ color: 0x9a9820, width: 2, alpha: 0.4 });
+                }
+
+                // Branches
+                graphics.moveTo(x - 3 * scale, y - 42 * scale);
+                graphics.lineTo(x - 18 * scale, y - 52 * scale);
+                graphics.stroke({ color: 0xb4a825, width: 3 * scale });
+                graphics.moveTo(x + 3 * scale, y - 40 * scale);
+                graphics.lineTo(x + 20 * scale, y - 48 * scale);
+                graphics.stroke({ color: 0xb4a825, width: 3 * scale });
+
+                // Feathery crown
+                graphics.ellipse(x, y - 58 * scale, 30 * scale, 14 * scale);
+                graphics.fill(0x4a7a23);
+
+                // Light leaf clusters
+                for (let i = 0; i < 12; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 54 * scale;
+                    const ly = y - 58 * scale + (seededRandom(i + 10) - 0.5) * 22 * scale;
+                    const lsize = (4 + seededRandom(i + 20) * 4) * scale;
+                    graphics.ellipse(lx, ly, lsize, lsize * 0.5);
+                    graphics.fill(seededRandom(i + 30) > 0.5 ? 0x5a8a33 : 0x6a9a43);
+                }
+                break;
+            }
+
+            case 'umbrella_thorn': {
+                // Iconic flat-topped African acacia
+                // Shadow
+                graphics.ellipse(x, y + 5, 35 * scale, 14 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 4 * scale, y - 40 * scale, 8 * scale, 45 * scale);
+                graphics.fill(0x5D4037);
+
+                // Main branches spreading out
+                const branchY = y - 42 * scale;
+                graphics.moveTo(x - 2 * scale, branchY);
+                graphics.lineTo(x - 28 * scale, branchY - 8 * scale);
+                graphics.stroke({ color: 0x5D4037, width: 4 * scale });
+                graphics.moveTo(x + 2 * scale, branchY);
+                graphics.lineTo(x + 30 * scale, branchY - 6 * scale);
+                graphics.stroke({ color: 0x5D4037, width: 4 * scale });
+
+                // Flat-topped canopy (the signature umbrella shape)
+                graphics.ellipse(x, y - 55 * scale, 38 * scale, 10 * scale);
+                graphics.fill(0x3a6013);
+
+                // Top surface detail
+                graphics.ellipse(x, y - 58 * scale, 35 * scale, 8 * scale);
+                graphics.fill(0x4a7023);
+
+                // Leaf clusters on canopy
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 68 * scale;
+                    const ly = y - 55 * scale + (seededRandom(i + 10) - 0.5) * 14 * scale;
+                    const lsize = (4 + seededRandom(i + 20) * 5) * scale;
+                    graphics.ellipse(lx, ly, lsize, lsize * 0.4);
+                    graphics.fill(seededRandom(i + 30) > 0.5 ? 0x5a8033 : 0x4a7023);
+                }
+
+                // Highlight on top
+                graphics.ellipse(x - 8 * scale, y - 60 * scale, 18 * scale, 4 * scale);
+                graphics.fill({ color: 0x6a9043, alpha: 0.4 });
+                break;
+            }
+
+            case 'baobab': {
+                // Massive swollen trunk, small crown
+                // Large shadow
+                graphics.ellipse(x, y + 8, 30 * scale, 14 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.25 });
+
+                // Massive swollen trunk
+                const trunkW = 24 * scale;
+                const trunkH = 50 * scale;
+                // Draw swollen trunk shape
+                graphics.moveTo(x - trunkW / 2, y);
+                graphics.quadraticCurveTo(x - trunkW * 0.7, y - trunkH * 0.5, x - trunkW * 0.3, y - trunkH);
+                graphics.lineTo(x + trunkW * 0.3, y - trunkH);
+                graphics.quadraticCurveTo(x + trunkW * 0.7, y - trunkH * 0.5, x + trunkW / 2, y);
+                graphics.fill(0x8b8078);
+
+                // Bark texture - vertical lines
+                for (let i = 0; i < 6; i++) {
+                    const bx = x - 10 * scale + i * 4 * scale;
+                    graphics.moveTo(bx, y - 5);
+                    graphics.lineTo(bx + seededRandom(i) * 2, y - 45 * scale);
+                    graphics.stroke({ color: 0x6b6058, width: 1, alpha: 0.5 });
+                }
+
+                // Small stubby branches at top
+                for (let i = 0; i < 5; i++) {
+                    const angle = -Math.PI / 2 + (i - 2) * 0.4;
+                    const blen = 12 * scale;
+                    graphics.moveTo(x + (i - 2) * 4 * scale, y - trunkH);
+                    graphics.lineTo(
+                        x + (i - 2) * 4 * scale + Math.cos(angle) * blen,
+                        y - trunkH + Math.sin(angle) * blen
+                    );
+                    graphics.stroke({ color: 0x7b7068, width: 3 * scale });
+                }
+
+                // Small crown (baobabs have tiny crowns relative to trunk)
+                graphics.ellipse(x, y - trunkH - 8 * scale, 22 * scale, 10 * scale);
+                graphics.fill(0x4a6a23);
+
+                // Sparse leaves
+                for (let i = 0; i < 6; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 36 * scale;
+                    const ly = y - trunkH - 8 * scale + (seededRandom(i + 10) - 0.5) * 14 * scale;
+                    graphics.ellipse(lx, ly, 4 * scale, 3 * scale);
+                    graphics.fill(0x5a7a33);
+                }
+                break;
+            }
+
+            case 'khejri': {
+                // Hardy sparse desert tree
+                // Shadow
+                graphics.ellipse(x, y + 4, 22 * scale, 9 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Gnarled trunk
+                graphics.moveTo(x - 4 * scale, y);
+                graphics.quadraticCurveTo(x - 6 * scale, y - 20 * scale, x - 2 * scale, y - 38 * scale);
+                graphics.lineTo(x + 2 * scale, y - 38 * scale);
+                graphics.quadraticCurveTo(x + 6 * scale, y - 20 * scale, x + 4 * scale, y);
+                graphics.fill(0x5a4a3a);
+
+                // Thorny branches
+                for (let i = 0; i < 4; i++) {
+                    const by = y - 20 * scale - i * 6 * scale;
+                    const side = i % 2 === 0 ? -1 : 1;
+                    graphics.moveTo(x, by);
+                    graphics.lineTo(x + side * 16 * scale, by - 8 * scale);
+                    graphics.stroke({ color: 0x5a4a3a, width: 2 * scale });
+                    // Small thorns
+                    graphics.moveTo(x + side * 8 * scale, by - 4 * scale);
+                    graphics.lineTo(x + side * 12 * scale, by - 2 * scale);
+                    graphics.stroke({ color: 0x4a3a2a, width: 1 });
+                }
+
+                // Sparse feathery crown
+                graphics.ellipse(x, y - 45 * scale, 24 * scale, 12 * scale);
+                graphics.fill({ color: 0x4a6a23, alpha: 0.8 });
+
+                // Small compound leaves
+                for (let i = 0; i < 8; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 40 * scale;
+                    const ly = y - 45 * scale + (seededRandom(i + 10) - 0.5) * 18 * scale;
+                    graphics.ellipse(lx, ly, 3 * scale, 2 * scale);
+                    graphics.fill(0x5a7a33);
+                }
+                break;
+            }
+
+            case 'sigillaria': {
+                // Ancient Carboniferous tree-like plant
+                // Shadow
+                graphics.ellipse(x, y + 4, 18 * scale, 7 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Tall straight trunk with scale-like pattern
+                const sigTrunkH = 55 * scale;
+                graphics.rect(x - 5 * scale, y - sigTrunkH, 10 * scale, sigTrunkH);
+                graphics.fill(0x4a5a3a);
+
+                // Scale/diamond bark pattern
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 2; col++) {
+                        const sx = x - 3 * scale + col * 6 * scale;
+                        const sy = y - 8 * scale - row * 6 * scale;
+                        graphics.rect(sx, sy, 4 * scale, 4 * scale);
+                        graphics.stroke({ color: 0x3a4a2a, width: 1 });
+                    }
+                }
+
+                // Crown - tuft of long strap-like leaves
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i / 10) * Math.PI * 2;
+                    const leafLen = 18 * scale;
+                    const endX = x + Math.cos(angle) * leafLen;
+                    const endY = y - sigTrunkH - 5 + Math.sin(angle) * leafLen * 0.3;
+                    graphics.moveTo(x, y - sigTrunkH);
+                    graphics.quadraticCurveTo(
+                        x + Math.cos(angle) * leafLen * 0.5,
+                        y - sigTrunkH - 3 + Math.sin(angle) * leafLen * 0.2,
+                        endX,
+                        endY
+                    );
+                    graphics.stroke({ color: 0x5a7a3a, width: 2 * scale });
+                }
+                break;
+            }
+
+            case 'grass_tree': {
+                // Australian Xanthorrhoea - black trunk, grass-like spray
+                // Shadow
+                graphics.ellipse(x, y + 4, 16 * scale, 6 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Blackened trunk (from fire resistance)
+                const grassTreeH = 35 * scale;
+                graphics.rect(x - 4 * scale, y - grassTreeH, 8 * scale, grassTreeH);
+                graphics.fill(0x2a2a2a);
+
+                // Texture on trunk - rough
+                for (let i = 0; i < 5; i++) {
+                    const ty = y - 5 * scale - i * 6 * scale;
+                    graphics.moveTo(x - 4 * scale, ty);
+                    graphics.lineTo(x + 4 * scale, ty + seededRandom(i) * 2);
+                    graphics.stroke({ color: 0x1a1a1a, width: 1 });
+                }
+
+                // Grass-like spray of leaves
+                for (let i = 0; i < 16; i++) {
+                    const angle = (i / 16) * Math.PI * 2;
+                    const leafLen = (15 + seededRandom(i) * 10) * scale;
+                    const droop = 0.3 + seededRandom(i + 10) * 0.2;
+                    const endX = x + Math.cos(angle) * leafLen;
+                    const endY = y - grassTreeH + Math.sin(angle) * leafLen * droop;
+
+                    graphics.moveTo(x, y - grassTreeH);
+                    graphics.quadraticCurveTo(
+                        x + Math.cos(angle) * leafLen * 0.6,
+                        y - grassTreeH + Math.sin(angle) * leafLen * droop * 0.3,
+                        endX,
+                        endY
+                    );
+                    graphics.stroke({ color: seededRandom(i + 20) > 0.5 ? 0x6a8a3a : 0x5a7a2a, width: 1.5 });
+                }
+
+                // Flower spike (sometimes)
+                if (seededRandom(999) > 0.5) {
+                    graphics.rect(x - 1.5 * scale, y - grassTreeH - 20 * scale, 3 * scale, 20 * scale);
+                    graphics.fill(0x5a4a3a);
+                    graphics.ellipse(x, y - grassTreeH - 22 * scale, 4 * scale, 8 * scale);
+                    graphics.fill(0xe8e0b0);
+                }
+                break;
+            }
+
+            case 'red_gum': {
+                // Large eucalyptus with smooth multicolored bark
+                // Shadow
+                graphics.ellipse(x, y + 6, 32 * scale, 13 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Smooth trunk - patches of cream, pink, gray
+                const redGumH = 55 * scale;
+                graphics.rect(x - 6 * scale, y - redGumH, 12 * scale, redGumH);
+                graphics.fill(0xc8b8a8);
+
+                // Bark color patches
+                const barkColors = [0xe8d8c8, 0xd8a8a0, 0xb8a898, 0xc8c0b0];
+                for (let i = 0; i < 8; i++) {
+                    const px = x - 5 * scale + seededRandom(i) * 8 * scale;
+                    const py = y - 10 * scale - seededRandom(i + 10) * 40 * scale;
+                    const pw = (3 + seededRandom(i + 20) * 4) * scale;
+                    const ph = (5 + seededRandom(i + 30) * 8) * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 40) * barkColors.length);
+                    graphics.rect(px, py, pw, ph);
+                    graphics.fill(barkColors[colorIdx]);
+                }
+
+                // Wide spreading crown
+                graphics.ellipse(x, y - redGumH - 5 * scale, 35 * scale, 22 * scale);
+                graphics.fill(0x3a5a23);
+
+                // Hanging eucalyptus leaves
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 60 * scale;
+                    const ly = y - redGumH - 5 * scale + (seededRandom(i + 10) - 0.5) * 36 * scale;
+                    // Sickle-shaped leaves
+                    graphics.ellipse(lx, ly, 6 * scale, 2 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a6a33 : 0x5a7a43);
+                }
+                break;
+            }
+
+            case 'hard_quandong': {
+                // Australian native with drooping foliage
+                // Shadow
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                const quandongH = 45 * scale;
+                graphics.rect(x - 4 * scale, y - quandongH, 8 * scale, quandongH);
+                graphics.fill(0x5a4a3a);
+
+                // Branches
+                graphics.moveTo(x - 2 * scale, y - quandongH + 8);
+                graphics.lineTo(x - 16 * scale, y - quandongH - 6 * scale);
+                graphics.stroke({ color: 0x5a4a3a, width: 3 * scale });
+                graphics.moveTo(x + 2 * scale, y - quandongH + 10);
+                graphics.lineTo(x + 18 * scale, y - quandongH - 4 * scale);
+                graphics.stroke({ color: 0x5a4a3a, width: 3 * scale });
+
+                // Drooping crown
+                graphics.ellipse(x, y - quandongH - 8 * scale, 28 * scale, 18 * scale);
+                graphics.fill(0x3a5a2a);
+
+                // Drooping leaf clusters
+                for (let i = 0; i < 10; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 48 * scale;
+                    const ly = y - quandongH - 8 * scale + seededRandom(i + 10) * 20 * scale;
+                    graphics.ellipse(lx, ly, 5 * scale, 8 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a6a3a : 0x3a5a2a);
+                }
+
+                // Bright blue fruit (quandong fruit)
+                if (seededRandom(888) > 0.4) {
+                    for (let i = 0; i < 4; i++) {
+                        const fx = x + (seededRandom(i + 500) - 0.5) * 30 * scale;
+                        const fy = y - quandongH + seededRandom(i + 510) * 15 * scale;
+                        graphics.circle(fx, fy, 2.5 * scale);
+                        graphics.fill(0x4488cc);
+                    }
+                }
+                break;
+            }
+
+            case 'eucalyptus': {
+                // Tall aromatic eucalyptus
+                // Shadow
+                graphics.ellipse(x, y + 6, 26 * scale, 11 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Tall smooth trunk
+                const eucH = 60 * scale;
+                graphics.rect(x - 5 * scale, y - eucH, 10 * scale, eucH);
+                graphics.fill(0xb8a898);
+
+                // Peeling bark strips
+                for (let i = 0; i < 4; i++) {
+                    const stripY = y - 10 * scale - i * 12 * scale;
+                    graphics.moveTo(x - 4 * scale, stripY);
+                    graphics.quadraticCurveTo(x - 6 * scale, stripY - 6, x - 5 * scale, stripY - 10);
+                    graphics.stroke({ color: 0xc8b8a0, width: 2, alpha: 0.6 });
+                }
+
+                // Crown - open and airy
+                graphics.ellipse(x, y - eucH - 8 * scale, 28 * scale, 20 * scale);
+                graphics.fill({ color: 0x4a6a33, alpha: 0.8 });
+
+                // Hanging sickle-shaped leaves
+                for (let i = 0; i < 16; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 50 * scale;
+                    const ly = y - eucH - 8 * scale + (seededRandom(i + 10) - 0.5) * 35 * scale;
+                    const angle = seededRandom(i + 20) * 0.5;
+                    // Draw curved leaf
+                    graphics.moveTo(lx - 4 * scale, ly);
+                    graphics.quadraticCurveTo(lx, ly - 3 * scale * angle, lx + 4 * scale, ly);
+                    graphics.stroke({ color: seededRandom(i + 30) > 0.5 ? 0x5a7a43 : 0x6a8a53, width: 2 });
+                }
+
+                // Gum nuts occasionally
+                if (seededRandom(777) > 0.5) {
+                    for (let i = 0; i < 3; i++) {
+                        const nx = x + (seededRandom(i + 600) - 0.5) * 20 * scale;
+                        const ny = y - eucH + 5 + seededRandom(i + 610) * 10 * scale;
+                        graphics.circle(nx, ny, 2 * scale);
+                        graphics.fill(0x5a4a3a);
+                    }
+                }
+                break;
+            }
+
             default: {
                 // Generic plant with more detail
                 graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);

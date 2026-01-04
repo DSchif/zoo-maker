@@ -91,7 +91,26 @@ export type AnimalSpecies = 'lion' | 'bison';
 export type Gender = 'male' | 'female';
 
 // Foliage types
-export type FoliageType = 'acacia' | 'tall_grass' | 'prairie_grass' | 'shrub' | 'wildflowers';
+export type FoliageType =
+    // Savannah biome
+    | 'thorn_bush'
+    | 'tall_grass'
+    | 'senegal_date_palm'
+    | 'acacia_caffra'
+    | 'thorn_acacia'
+    | 'yellow_fever_tree'
+    | 'umbrella_thorn'
+    | 'baobab'
+    | 'khejri'
+    | 'sigillaria'
+    | 'grass_tree'
+    | 'red_gum'
+    | 'hard_quandong'
+    | 'eucalyptus'
+    // Prairie biome
+    | 'prairie_grass'
+    | 'shrub'
+    | 'wildflowers';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

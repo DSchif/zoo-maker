@@ -214,12 +214,42 @@ body {
     border-radius: 8px;
     padding: 10px;
     min-width: 200px;
+    max-height: calc(100vh - 150px);
+    display: flex;
+    flex-direction: column;
     z-index: 100;
     pointer-events: auto;
 }
 
 #submenu-panel.hidden {
     display: none;
+}
+
+/* Scrollable items container */
+.submenu-scroll-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 400px;
+    scrollbar-width: thin;
+    scrollbar-color: #555 #2a2a2a;
+}
+
+.submenu-scroll-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.submenu-scroll-container::-webkit-scrollbar-track {
+    background: #2a2a2a;
+    border-radius: 4px;
+}
+
+.submenu-scroll-container::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.submenu-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #666;
 }
 
 .submenu-item {
@@ -262,6 +292,11 @@ body {
 .submenu-item .cost {
     font-size: 12px;
     color: #4aff4a;
+}
+
+.submenu-item .biome-icon {
+    font-size: 24px;
+    margin-left: auto;
 }
 
 /* Submenu Tabs */
@@ -1118,7 +1153,7 @@ body {
 /* Foliage Info Panel */
 #foliage-info-panel {
     position: absolute;
-    left: 290px;
+    left: 330px;
     top: 70px;
     width: 280px;
     background: linear-gradient(180deg, #3d3d3d 0%, #2a2a2a 100%);

@@ -174,7 +174,14 @@ export type FoliageType =
     | 'paper_birch_tree'
     | 'western_juniper_tree'
     | 'himalayan_pine_tree'
-    | 'bamboo';
+    | 'bamboo'
+    // Snow/Tundra biome
+    | 'snowy_grass'
+    | 'snowy_bush'
+    | 'arctic_grass'
+    | 'snowy_tree'
+    | 'arctic_bush'
+    | 'arctic_birch_tree';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

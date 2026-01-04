@@ -5389,6 +5389,193 @@ export class Renderer {
                 break;
             }
 
+            // ================== SNOW/TUNDRA BIOME ==================
+
+            case 'snowy_grass': {
+                // Hardy grass poking through snow
+                graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Snow mound base
+                graphics.ellipse(x, y, 12 * scale, 5 * scale);
+                graphics.fill(0xf0f0f8);
+
+                // Grass blades poking through
+                for (let i = 0; i < 8; i++) {
+                    const gx = x - 8 * scale + i * 2 * scale;
+                    const height = (8 + seededRandom(foliage.id + i) * 6) * scale;
+                    const sway = (seededRandom(foliage.id + i + 10) - 0.5) * 4 * scale;
+                    graphics.moveTo(gx, y - 2 * scale);
+                    graphics.lineTo(gx + sway, y - height);
+                    graphics.stroke({ color: 0x8a9a6a, width: 1.5 * scale });
+                }
+
+                // Snow on some blades
+                for (let i = 0; i < 3; i++) {
+                    const sx = x - 6 * scale + i * 4 * scale;
+                    graphics.circle(sx, y - 6 * scale, 2 * scale);
+                    graphics.fill(0xffffff);
+                }
+                break;
+            }
+
+            case 'snowy_bush': {
+                // Snow-covered shrub
+                graphics.ellipse(x, y + 4, 16 * scale, 7 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Bush base (darker green showing through)
+                graphics.circle(x, y - 6 * scale, 14 * scale);
+                graphics.fill(0x3a5a3a);
+                graphics.circle(x - 4 * scale, y - 10 * scale, 10 * scale);
+                graphics.fill(0x4a6a4a);
+                graphics.circle(x + 5 * scale, y - 8 * scale, 9 * scale);
+                graphics.fill(0x3a5a3a);
+
+                // Snow covering on top
+                graphics.ellipse(x, y - 12 * scale, 12 * scale, 6 * scale);
+                graphics.fill(0xf8f8ff);
+                graphics.ellipse(x - 5 * scale, y - 10 * scale, 8 * scale, 4 * scale);
+                graphics.fill(0xffffff);
+                graphics.ellipse(x + 6 * scale, y - 9 * scale, 7 * scale, 3 * scale);
+                graphics.fill(0xf0f0f8);
+                break;
+            }
+
+            case 'arctic_grass': {
+                // Tough tundra grass
+                graphics.ellipse(x, y + 3, 16 * scale, 7 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Snow/ice base
+                graphics.ellipse(x, y, 14 * scale, 6 * scale);
+                graphics.fill(0xe8e8f0);
+
+                // Clumps of tough grass
+                for (let clump = 0; clump < 3; clump++) {
+                    const cx = x - 8 * scale + clump * 8 * scale;
+                    for (let i = 0; i < 5; i++) {
+                        const gx = cx + (i - 2) * 1.5 * scale;
+                        const height = (10 + seededRandom(foliage.id + clump * 5 + i) * 8) * scale;
+                        const sway = (seededRandom(foliage.id + clump * 5 + i + 20) - 0.5) * 3 * scale;
+                        graphics.moveTo(gx, y - 2 * scale);
+                        graphics.quadraticCurveTo(gx + sway * 0.5, y - height * 0.6, gx + sway, y - height);
+                        graphics.stroke({ color: 0x7a8a5a, width: 1.5 * scale });
+                    }
+                }
+
+                // Frost on tips
+                for (let i = 0; i < 4; i++) {
+                    const fx = x - 6 * scale + i * 4 * scale;
+                    graphics.circle(fx, y - 12 * scale + seededRandom(foliage.id + i) * 4 * scale, 1.5 * scale);
+                    graphics.fill(0xffffff);
+                }
+                break;
+            }
+
+            case 'snowy_tree': {
+                // Snow-laden conifer
+                graphics.ellipse(x, y + 6, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                const snowyTreeH = 55 * scale;
+                // Trunk
+                graphics.rect(x - 4 * scale, y - snowyTreeH * 0.3, 8 * scale, snowyTreeH * 0.3);
+                graphics.fill(0x5a4a3a);
+
+                // Conical layers with snow
+                for (let i = 0; i < 5; i++) {
+                    const layerY = y - snowyTreeH * 0.2 - i * 9 * scale;
+                    const layerWidth = (22 - i * 3.5) * scale;
+
+                    // Green tree layer
+                    graphics.moveTo(x, layerY - 10 * scale);
+                    graphics.lineTo(x - layerWidth, layerY);
+                    graphics.lineTo(x + layerWidth, layerY);
+                    graphics.closePath();
+                    graphics.fill(0x2a4a2a);
+
+                    // Snow on branches
+                    graphics.moveTo(x, layerY - 8 * scale);
+                    graphics.lineTo(x - layerWidth * 0.8, layerY - 2 * scale);
+                    graphics.lineTo(x + layerWidth * 0.8, layerY - 2 * scale);
+                    graphics.closePath();
+                    graphics.fill(0xf8f8ff);
+                }
+
+                // Snow on top
+                graphics.circle(x, y - snowyTreeH, 5 * scale);
+                graphics.fill(0xffffff);
+                break;
+            }
+
+            case 'arctic_bush': {
+                // Dense shrub from Ice Age
+                graphics.ellipse(x, y + 4, 18 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Dense, low-growing foliage
+                graphics.ellipse(x, y - 8 * scale, 16 * scale, 10 * scale);
+                graphics.fill(0x4a5a4a);
+                graphics.ellipse(x - 6 * scale, y - 12 * scale, 12 * scale, 8 * scale);
+                graphics.fill(0x5a6a5a);
+                graphics.ellipse(x + 7 * scale, y - 10 * scale, 11 * scale, 7 * scale);
+                graphics.fill(0x4a5a4a);
+
+                // Frost/snow patches
+                graphics.ellipse(x, y - 14 * scale, 10 * scale, 5 * scale);
+                graphics.fill(0xe8e8f0);
+                graphics.ellipse(x - 5 * scale, y - 12 * scale, 6 * scale, 3 * scale);
+                graphics.fill(0xf0f0f8);
+                graphics.ellipse(x + 6 * scale, y - 11 * scale, 5 * scale, 3 * scale);
+                graphics.fill(0xffffff);
+
+                // Small frozen berries
+                for (let i = 0; i < 4; i++) {
+                    const bx = x + (seededRandom(foliage.id + i) - 0.5) * 14 * scale;
+                    const by = y - 8 * scale + (seededRandom(foliage.id + i + 5) - 0.5) * 6 * scale;
+                    graphics.circle(bx, by, 1.5 * scale);
+                    graphics.fill(0x6a4a5a);
+                }
+                break;
+            }
+
+            case 'arctic_birch_tree': {
+                // Hardy birch adapted to extreme cold
+                graphics.ellipse(x, y + 6, 22 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                const arcticBirchH = 50 * scale;
+                // White/silver bark - multiple thin trunks
+                for (let trunk = 0; trunk < 3; trunk++) {
+                    const tx = x - 6 * scale + trunk * 6 * scale;
+                    const th = arcticBirchH * (0.6 + trunk * 0.15);
+                    graphics.rect(tx - 2 * scale, y - th, 4 * scale, th);
+                    graphics.fill(0xf0f0e8);
+
+                    // Dark horizontal marks
+                    for (let i = 0; i < 5; i++) {
+                        graphics.ellipse(tx, y - 5 * scale - i * 6 * scale, 1.5 * scale, 0.5 * scale);
+                        graphics.fill(0x3a3a3a);
+                    }
+                }
+
+                // Sparse, cold-adapted foliage
+                graphics.ellipse(x, y - arcticBirchH, 18 * scale, 12 * scale);
+                graphics.fill(0x5a7a5a);
+                graphics.ellipse(x - 8 * scale, y - arcticBirchH * 0.85, 12 * scale, 8 * scale);
+                graphics.fill(0x6a8a6a);
+                graphics.ellipse(x + 10 * scale, y - arcticBirchH * 0.9, 10 * scale, 7 * scale);
+                graphics.fill(0x5a7a5a);
+
+                // Snow on branches
+                graphics.ellipse(x, y - arcticBirchH - 5 * scale, 12 * scale, 5 * scale);
+                graphics.fill(0xf8f8ff);
+                graphics.ellipse(x - 6 * scale, y - arcticBirchH * 0.9, 8 * scale, 3 * scale);
+                graphics.fill(0xffffff);
+                break;
+            }
+
             default: {
                 // Generic plant with more detail
                 graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);

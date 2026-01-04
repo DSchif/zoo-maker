@@ -712,6 +712,13 @@ export class InputHandler {
                 { id: 'western_juniper_tree', name: 'Western Juniper Tree', cost: 125, icon: '🌲', biome: 'gray_stone' },
                 { id: 'himalayan_pine_tree', name: 'Himalayan Pine Tree', cost: 180, icon: '🌲', biome: 'gray_stone' },
                 { id: 'bamboo', name: 'Bamboo', cost: 500, icon: '🎋', biome: 'gray_stone' },
+                // Snow/Tundra
+                { id: 'snowy_grass', name: 'Snowy Grass', cost: 35, icon: '🌾', biome: 'snow' },
+                { id: 'snowy_bush', name: 'Snowy Bush', cost: 75, icon: '❄️', biome: 'snow' },
+                { id: 'arctic_grass', name: 'Arctic Grass', cost: 100, icon: '🌾', biome: 'snow' },
+                { id: 'snowy_tree', name: 'Snowy Tree', cost: 110, icon: '🌲', biome: 'snow' },
+                { id: 'arctic_bush', name: 'Arctic Bush', cost: 150, icon: '❄️', biome: 'snow' },
+                { id: 'arctic_birch_tree', name: 'Arctic Birch Tree', cost: 200, icon: '🌳', biome: 'snow' },
             ],
             shelter: [
                 { id: 'concrete_small', name: 'Small Shelter (2x1)', cost: 500, icon: '🏠' },
@@ -844,6 +851,7 @@ export class InputHandler {
             rainforest_floor: '🌴',
             rainforest: '🌴',
             gray_stone: '🏔️',
+            snow: '❄️',
             temperate: '🌲',
             tundra: '❄️',
         };

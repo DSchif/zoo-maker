@@ -382,7 +382,7 @@ export class Game {
         for (const tile of shuffled) {
             const tileData = this.world.getTile(tile.x, tile.y);
             if (!tileData) continue;
-            if (tileData.terrain === 'water') continue;
+            if (tileData.terrain === 'fresh_water' || tileData.terrain === 'salt_water') continue;
             if (tileData.path) continue; // Don't place food on paths
 
             // Check if there's already food here
@@ -478,7 +478,7 @@ export class Game {
         for (const spot of spots) {
             const tile = this.world.getTile(spot.x, spot.y);
             if (!tile) continue;
-            if (tile.terrain === 'water') continue;
+            if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') continue;
             if (tile.path) return spot;
         }
 
@@ -486,7 +486,7 @@ export class Game {
         for (const spot of spots) {
             const tile = this.world.getTile(spot.x, spot.y);
             if (!tile) continue;
-            if (tile.terrain === 'water') continue;
+            if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') continue;
             return spot;
         }
 
@@ -1028,7 +1028,7 @@ export class Game {
                 if (!tile) return false;
 
                 // Can't place on water
-                if (tile.terrain === 'water') return false;
+                if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
 
                 // Can't place on paths (buildings should be off-path)
                 if (tile.path) return false;

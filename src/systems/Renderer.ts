@@ -11,11 +11,19 @@ const TILE_HEIGHT = 32;
 // Terrain colors
 const TERRAIN_COLORS: Record<string, { base: number; highlight: number; shadow: number }> = {
     grass: { base: 0x4a7c23, highlight: 0x5a9c33, shadow: 0x3a6c13 },
-    dirt: { base: 0x8b7355, highlight: 0x9b8365, shadow: 0x7b6345 },
-    sand: { base: 0xd4a843, highlight: 0xe4b853, shadow: 0xc49833 },
-    water: { base: 0x4a90d9, highlight: 0x5aa0e9, shadow: 0x3a80c9 },
-    savanna: { base: 0xc4a747, highlight: 0xd4b757, shadow: 0xb49737 },
     prairie: { base: 0x7cb342, highlight: 0x8cc352, shadow: 0x6ca332 },
+    savanna_grass: { base: 0xc4a747, highlight: 0xd4b757, shadow: 0xb49737 },
+    sand: { base: 0xd4a843, highlight: 0xe4b853, shadow: 0xc49833 },
+    dirt: { base: 0x8b7355, highlight: 0x9b8365, shadow: 0x7b6345 },
+    rainforest_floor: { base: 0x3d5c28, highlight: 0x4d6c38, shadow: 0x2d4c18 },
+    brown_stone: { base: 0x7a6352, highlight: 0x8a7362, shadow: 0x6a5342 },
+    gray_stone: { base: 0x707070, highlight: 0x858585, shadow: 0x5a5a5a },
+    gravel: { base: 0x9a9a9a, highlight: 0xaaaaaa, shadow: 0x8a8a8a },
+    snow: { base: 0xe8e8f0, highlight: 0xffffff, shadow: 0xd0d0e0 },
+    fresh_water: { base: 0x4a90d9, highlight: 0x5aa0e9, shadow: 0x3a80c9 },
+    salt_water: { base: 0x2a6090, highlight: 0x3a70a0, shadow: 0x1a5080 },
+    deciduous_floor: { base: 0x6b5a3a, highlight: 0x7b6a4a, shadow: 0x5b4a2a },
+    coniferous_floor: { base: 0x4a4535, highlight: 0x5a5545, shadow: 0x3a3525 },
 };
 
 // Path colors
@@ -650,7 +658,7 @@ export class Renderer {
                 break;
             }
 
-            case 'water': {
+            case 'fresh_water': {
                 // Draw wave ripples
                 const time = Date.now() * 0.001;
                 const waveOffset = Math.sin(time + worldX * 0.5 + worldY * 0.3) * 2;
@@ -665,7 +673,24 @@ export class Renderer {
                 break;
             }
 
-            case 'savanna': {
+            case 'salt_water': {
+                // Draw wave ripples with foam
+                const time = Date.now() * 0.001;
+                const waveOffset = Math.sin(time + worldX * 0.4 + worldY * 0.2) * 2;
+
+                // Darker water shimmer
+                graphics.ellipse(x + waveOffset, y - 2 + waveOffset * 0.5, hw * 0.25, hh * 0.12);
+                graphics.fill({ color: 0x4a80b0, alpha: 0.3 });
+
+                // Foam/whitecap highlights
+                if (seededRandom(0) > 0.6) {
+                    graphics.ellipse(x - hw * 0.15, y + hh * 0.15, hw * 0.15, hh * 0.08);
+                    graphics.fill({ color: 0xffffff, alpha: 0.2 });
+                }
+                break;
+            }
+
+            case 'savanna_grass': {
                 // Draw dried grass tufts and small stones
                 const numTufts = 3 + Math.floor(seededRandom(0) * 3);
                 for (let i = 0; i < numTufts; i++) {
@@ -708,6 +733,172 @@ export class Renderer {
                     graphics.moveTo(px, py);
                     graphics.lineTo(px + (seededRandom(i + 300) - 0.5) * 2, py - height);
                     graphics.stroke({ color: shade, width: 1, alpha: 0.7 });
+                }
+                break;
+            }
+
+            case 'rainforest_floor': {
+                // Dark leaf litter with moisture
+                const numLeaves = 4 + Math.floor(seededRandom(0) * 3);
+                for (let i = 0; i < numLeaves; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.3;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.3;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    // Fallen leaves
+                    const size = 2 + seededRandom(i + 100) * 2;
+                    const shade = seededRandom(i + 200) > 0.5 ? 0x2d4c18 : 0x4d6c38;
+                    graphics.ellipse(px, py, size, size * 0.6);
+                    graphics.fill({ color: shade, alpha: 0.5 });
+                }
+                // Moisture spots
+                for (let i = 0; i < 2; i++) {
+                    const tx = (seededRandom(i + 50) - 0.5) * hw * 0.8;
+                    const ty = (seededRandom(i + 51) - 0.5) * hh * 0.8;
+                    graphics.circle(x + tx, y + ty, 3);
+                    graphics.fill({ color: 0x1a3a10, alpha: 0.3 });
+                }
+                break;
+            }
+
+            case 'brown_stone': {
+                // Rocky texture with cracks
+                const numRocks = 2 + Math.floor(seededRandom(0) * 2);
+                for (let i = 0; i < numRocks; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.0;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.0;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    const shade = seededRandom(i + 200) > 0.5 ? 0x6a5342 : 0x8a7362;
+                    graphics.ellipse(px, py, 4 + seededRandom(i) * 3, 2 + seededRandom(i + 1) * 2);
+                    graphics.fill({ color: shade, alpha: 0.4 });
+                }
+                // Crack lines
+                if (seededRandom(100) > 0.5) {
+                    const cx = (seededRandom(101) - 0.5) * hw * 0.6;
+                    graphics.moveTo(x + cx, y - hh * 0.3);
+                    graphics.lineTo(x + cx + 3, y + hh * 0.2);
+                    graphics.stroke({ color: 0x5a4332, width: 1, alpha: 0.4 });
+                }
+                break;
+            }
+
+            case 'gray_stone': {
+                // Gray rocky texture
+                const numRocks = 2 + Math.floor(seededRandom(0) * 2);
+                for (let i = 0; i < numRocks; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.0;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.0;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    const shade = seededRandom(i + 200) > 0.5 ? 0x5a5a5a : 0x858585;
+                    graphics.ellipse(px, py, 4 + seededRandom(i) * 3, 2 + seededRandom(i + 1) * 2);
+                    graphics.fill({ color: shade, alpha: 0.4 });
+                }
+                // Crack lines
+                if (seededRandom(100) > 0.6) {
+                    const cx = (seededRandom(101) - 0.5) * hw * 0.5;
+                    graphics.moveTo(x + cx, y - hh * 0.25);
+                    graphics.lineTo(x + cx - 2, y + hh * 0.25);
+                    graphics.stroke({ color: 0x4a4a4a, width: 1, alpha: 0.4 });
+                }
+                break;
+            }
+
+            case 'gravel': {
+                // Small scattered stones
+                const numStones = 8 + Math.floor(seededRandom(0) * 5);
+                for (let i = 0; i < numStones; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.4;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.4;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    const size = 1 + seededRandom(i + 100) * 1.5;
+                    const shade = seededRandom(i + 200) > 0.5 ? 0x7a7a7a : 0xbababa;
+                    graphics.circle(px, py, size);
+                    graphics.fill({ color: shade, alpha: 0.6 });
+                }
+                break;
+            }
+
+            case 'snow': {
+                // Sparkle effects and subtle drifts
+                const numSparkles = 3 + Math.floor(seededRandom(0) * 3);
+                for (let i = 0; i < numSparkles; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.2;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.2;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    // Snow sparkle
+                    graphics.circle(px, py, 1);
+                    graphics.fill({ color: 0xffffff, alpha: 0.7 });
+                }
+                // Subtle drift shadows
+                if (seededRandom(50) > 0.6) {
+                    const dx = (seededRandom(51) - 0.5) * hw * 0.8;
+                    graphics.ellipse(x + dx, y, hw * 0.3, hh * 0.1);
+                    graphics.fill({ color: 0xc0c0d0, alpha: 0.3 });
+                }
+                break;
+            }
+
+            case 'deciduous_floor': {
+                // Fallen leaves in autumn colors
+                const numLeaves = 5 + Math.floor(seededRandom(0) * 4);
+                for (let i = 0; i < numLeaves; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.4;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.4;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    // Autumn leaf colors
+                    const colorChoice = seededRandom(i + 200);
+                    let shade: number;
+                    if (colorChoice > 0.66) shade = 0x8b4513; // brown
+                    else if (colorChoice > 0.33) shade = 0xd2691e; // orange-brown
+                    else shade = 0xcd853f; // tan
+
+                    const size = 2 + seededRandom(i + 100) * 2;
+                    graphics.ellipse(px, py, size, size * 0.6);
+                    graphics.fill({ color: shade, alpha: 0.5 });
+                }
+                // Small twigs
+                if (seededRandom(80) > 0.7) {
+                    const tx = (seededRandom(81) - 0.5) * hw * 0.6;
+                    graphics.moveTo(x + tx, y);
+                    graphics.lineTo(x + tx + 4, y - 2);
+                    graphics.stroke({ color: 0x4a3020, width: 1, alpha: 0.4 });
+                }
+                break;
+            }
+
+            case 'coniferous_floor': {
+                // Pine needles and small pinecones
+                const numNeedles = 6 + Math.floor(seededRandom(0) * 4);
+                for (let i = 0; i < numNeedles; i++) {
+                    const tx = (seededRandom(i * 2) - 0.5) * hw * 1.3;
+                    const ty = (seededRandom(i * 2 + 1) - 0.5) * hh * 1.3;
+                    const px = x + tx;
+                    const py = y + ty;
+
+                    // Pine needle cluster
+                    const angle = seededRandom(i + 100) * Math.PI;
+                    const len = 3 + seededRandom(i + 101) * 2;
+                    graphics.moveTo(px, py);
+                    graphics.lineTo(px + Math.cos(angle) * len, py + Math.sin(angle) * len * 0.5);
+                    graphics.stroke({ color: 0x3a3525, width: 1, alpha: 0.5 });
+                }
+                // Small pinecone
+                if (seededRandom(90) > 0.75) {
+                    const cx = (seededRandom(91) - 0.5) * hw * 0.6;
+                    const cy = (seededRandom(92) - 0.5) * hh * 0.6;
+                    graphics.ellipse(x + cx, y + cy, 2, 3);
+                    graphics.fill({ color: 0x5a4535, alpha: 0.6 });
                 }
                 break;
             }
@@ -5234,7 +5425,7 @@ export class Renderer {
                 // Check terrain
                 const tile = this.game.world.getTile(x, y);
                 if (!tile) return false;
-                if (tile.terrain === 'water') return false;
+                if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
                 if (tile.path) return false; // Can't place on paths
 
                 // Check for existing shelters

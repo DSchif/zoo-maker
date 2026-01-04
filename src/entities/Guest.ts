@@ -693,7 +693,7 @@ export class Guest extends Entity {
     protected canWalkOn(tileX: number, tileY: number): boolean {
         const tile = this.game.world.getTile(tileX, tileY);
         if (!tile) return false;
-        if (tile.terrain === 'water') return false;
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
         return true;
     }
 

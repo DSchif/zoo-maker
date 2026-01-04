@@ -25,23 +25,23 @@ export const FoliageTypes: Record<FoliageType, FoliageTypeData> = {
         id: 'acacia',
         name: 'Acacia Tree',
         icon: '🌳',
-        biome: 'savanna',
+        biome: 'savanna_grass',
         cost: 150,
         tileSpace: 0.1,  // 10 can fit per tile (large tree)
         height: 'tall',
         description: 'Iconic African tree with a flat-topped canopy',
-        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna', 'prairie'],
+        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
     tall_grass: {
         id: 'tall_grass',
         name: 'Tall Savanna Grass',
         icon: '🌾',
-        biome: 'savanna',
+        biome: 'savanna_grass',
         cost: 25,
         tileSpace: 0.5,  // 2 per tile (takes more space)
         height: 'medium',
         description: 'Golden grass typical of African savannas',
-        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna', 'prairie'],
+        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
 
     // Prairie biome
@@ -54,7 +54,7 @@ export const FoliageTypes: Record<FoliageType, FoliageTypeData> = {
         tileSpace: 0.5,  // 2 per tile
         height: 'medium',
         description: 'Native North American prairie grass',
-        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna', 'prairie'],
+        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
     shrub: {
         id: 'shrub',
@@ -65,7 +65,7 @@ export const FoliageTypes: Record<FoliageType, FoliageTypeData> = {
         tileSpace: 0.15,  // ~6-7 per tile
         height: 'medium',
         description: 'Hardy shrub found in open grasslands',
-        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna', 'prairie'],
+        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
     wildflowers: {
         id: 'wildflowers',
@@ -76,7 +76,7 @@ export const FoliageTypes: Record<FoliageType, FoliageTypeData> = {
         tileSpace: 0.25,  // 4 per tile
         height: 'low',
         description: 'Colorful native prairie wildflowers',
-        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna', 'prairie'],
+        allowedTerrains: ['grass', 'dirt', 'sand', 'savanna_grass', 'prairie'],
     },
 };
 

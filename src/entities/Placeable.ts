@@ -361,7 +361,7 @@ export class Placeable {
 
                 // Check if approach tile is blocked by water
                 const tile = this.game.world.getTile(approachTile.x, approachTile.y);
-                if (!tile || tile.terrain === 'water') return false;
+                if (!tile || tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
 
                 // Check if approach tile is blocked by another placeable
                 const blockingPlaceable = this.game.getPlaceableAtTile(approachTile.x, approachTile.y);
@@ -478,7 +478,7 @@ export class Placeable {
             .filter(pos => {
                 const tile = this.game.world.getTile(pos.x, pos.y);
                 if (!tile) return false;
-                if (tile.terrain === 'water') return false;
+                if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
                 // Check not blocked by another placeable
                 if (this.game.getPlaceableAtTile(pos.x, pos.y)) return false;
                 return true;
@@ -524,7 +524,7 @@ export class Placeable {
                 // Check terrain
                 const tile = game.world.getTile(x, y);
                 if (!tile) return false;
-                if (tile.terrain === 'water') return false;
+                if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
 
                 // Buildings can't be placed on paths
                 if (tile.path) return false;

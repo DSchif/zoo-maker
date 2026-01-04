@@ -13,12 +13,12 @@ export const LionInfo = {
     lifespan: '15-20 years',
     size: 'Large',
     temperament: 'Territorial',
-    biome: 'savanna',
+    biome: 'savanna_grass',
 
     terrainNeeds: {
-        savanna: 0.6,
+        savanna_grass: 0.6,
         grass: 0.2,
-        water: 0.1,  // Lions like some water for drinking
+        fresh_water: 0.1,  // Lions like some water for drinking
     },
 
     foliageNeeds: {

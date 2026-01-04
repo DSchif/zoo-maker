@@ -15,7 +15,21 @@ export interface ScreenPos {
 }
 
 // Terrain types
-export type TerrainType = 'grass' | 'dirt' | 'sand' | 'water' | 'savanna' | 'prairie';
+export type TerrainType =
+    | 'grass'
+    | 'prairie'
+    | 'savanna_grass'
+    | 'sand'
+    | 'dirt'
+    | 'rainforest_floor'
+    | 'brown_stone'
+    | 'gray_stone'
+    | 'gravel'
+    | 'snow'
+    | 'fresh_water'
+    | 'salt_water'
+    | 'deciduous_floor'
+    | 'coniferous_floor';
 
 // Path types
 export type PathType = 'dirt' | 'stone' | 'brick' | 'cobble' | null;

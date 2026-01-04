@@ -394,8 +394,10 @@ export abstract class Animal extends Entity {
         if (interiorTiles.length === 0) return { value: 50, reason: 'Empty exhibit' };
 
         const terrainNames: Record<string, string> = {
-            savanna: 'Savanna', grass: 'Grass', prairie: 'Prairie',
-            dirt: 'Dirt', sand: 'Sand', water: 'Water'
+            grass: 'Grass', prairie: 'Prairie', savanna_grass: 'Savannah Grass', sand: 'Sand', dirt: 'Dirt',
+            rainforest_floor: 'Rainforest Floor', brown_stone: 'Brown Stone', gray_stone: 'Gray Stone',
+            gravel: 'Gravel', snow: 'Snow', fresh_water: 'Fresh Water', salt_water: 'Salt Water',
+            deciduous_floor: 'Deciduous Floor', coniferous_floor: 'Coniferous Floor'
         };
 
         // Count terrain types in exhibit
@@ -754,7 +756,7 @@ export abstract class Animal extends Entity {
 
                 if (exhibit.containsTile?.(testX, testY)) {
                     const tile = this.game.world.getTile(testX, testY);
-                    if (tile && tile.terrain !== 'water') {
+                    if (tile && tile.terrain !== 'fresh_water' && tile.terrain !== 'salt_water') {
                         babyX = testX;
                         babyY = testY;
                         break;
@@ -1138,7 +1140,7 @@ export abstract class Animal extends Entity {
     protected canWalkOn(tileX: number, tileY: number): boolean {
         const tile = this.game.world.getTile(tileX, tileY);
         if (!tile) return false;
-        if (tile.terrain === 'water') return false;
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
         if (tile.path) return false; // Animals avoid paths
 
         // Can't walk through shelters/placeables (except entrance tile when heading there)

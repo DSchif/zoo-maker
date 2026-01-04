@@ -206,7 +206,7 @@ export function checkForEnclosure(
             console.log(`  Skipped: tile outside world`);
             continue;
         }
-        if (tile.terrain === 'water') {
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') {
             console.log(`  Skipped: water tile`);
             continue;
         }
@@ -279,7 +279,7 @@ function floodFillEnclosure(
             return { enclosed: false, interiorTiles: [], perimeterFences: [] };
         }
 
-        if (tile.terrain === 'water') continue;
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') continue;
 
         interior.push(current);
 

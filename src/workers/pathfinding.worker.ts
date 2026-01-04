@@ -86,7 +86,7 @@ function rebuildPathDistanceMap(): void {
             if (nx < 0 || nx >= worldData.width || ny < 0 || ny >= worldData.height) continue;
 
             const tile = worldData.tiles[ny]?.[nx];
-            if (!tile || tile.terrain === 'water') continue;
+            if (!tile || tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') continue;
 
             pathDistanceMap.set(key, dist + 1);
             queue.push({ x: nx, y: ny, dist: dist + 1 });
@@ -261,7 +261,7 @@ function isValidTile(
 ): boolean {
     const tile = getTile(x, y);
     if (!tile) return false;
-    if (tile.terrain === 'water') return false;
+    if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
 
     // Animals can't walk on paths
     if (!canUsePaths && tile.path) return false;

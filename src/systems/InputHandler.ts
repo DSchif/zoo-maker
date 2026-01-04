@@ -594,11 +594,19 @@ export class InputHandler {
         const submenus: Record<string, Array<{ id: string; name: string; cost: number; icon: string; biome?: string }>> = {
             terrain: [
                 { id: 'grass', name: 'Grass', cost: 10, icon: '🌿' },
+                { id: 'prairie', name: 'Prairie', cost: 12, icon: '🌱' },
+                { id: 'savanna_grass', name: 'Savannah Grass', cost: 15, icon: '🌾' },
+                { id: 'sand', name: 'Sand', cost: 8, icon: '🏖️' },
                 { id: 'dirt', name: 'Dirt', cost: 5, icon: '🟫' },
-                { id: 'sand', name: 'Sand', cost: 15, icon: '🏖️' },
-                { id: 'savanna', name: 'Savanna', cost: 20, icon: '🌾' },
-                { id: 'prairie', name: 'Prairie', cost: 18, icon: '🌱' },
-                { id: 'water', name: 'Water', cost: 50, icon: '💧' },
+                { id: 'rainforest_floor', name: 'Rainforest Floor', cost: 20, icon: '🌴' },
+                { id: 'brown_stone', name: 'Brown Stone', cost: 15, icon: '🪨' },
+                { id: 'gray_stone', name: 'Gray Stone', cost: 15, icon: '⚪' },
+                { id: 'gravel', name: 'Gravel', cost: 10, icon: '⚫' },
+                { id: 'snow', name: 'Snow', cost: 25, icon: '❄️' },
+                { id: 'fresh_water', name: 'Fresh Water', cost: 50, icon: '💧' },
+                { id: 'salt_water', name: 'Salt Water', cost: 55, icon: '🌊' },
+                { id: 'deciduous_floor', name: 'Deciduous Floor', cost: 18, icon: '🍂' },
+                { id: 'coniferous_floor', name: 'Coniferous Floor', cost: 18, icon: '🌲' },
             ],
             path: [
                 { id: 'dirt', name: 'Dirt Path', cost: 15, icon: '🟤' },
@@ -620,8 +628,8 @@ export class InputHandler {
                 { id: 'maintenance', name: 'Maintenance', cost: 400, icon: '🔧' },
             ],
             foliage: [
-                { id: 'acacia', name: 'Acacia Tree', cost: 150, icon: '🌳', biome: 'savanna' },
-                { id: 'tall_grass', name: 'Tall Grass', cost: 25, icon: '🌾', biome: 'savanna' },
+                { id: 'acacia', name: 'Acacia Tree', cost: 150, icon: '🌳', biome: 'savanna_grass' },
+                { id: 'tall_grass', name: 'Tall Grass', cost: 25, icon: '🌾', biome: 'savanna_grass' },
                 { id: 'prairie_grass', name: 'Prairie Grass', cost: 20, icon: '🌿', biome: 'prairie' },
                 { id: 'shrub', name: 'Prairie Shrub', cost: 75, icon: '🌲', biome: 'prairie' },
                 { id: 'wildflowers', name: 'Wildflowers', cost: 30, icon: '🌸', biome: 'prairie' },
@@ -891,7 +899,10 @@ export class InputHandler {
         // Terrain needs
         if (terrainEl) {
             const terrainNames: Record<string, string> = {
-                savanna: 'Savanna', grass: 'Grass', prairie: 'Prairie', dirt: 'Dirt', sand: 'Sand', water: 'Water'
+                grass: 'Grass', prairie: 'Prairie', savanna_grass: 'Savannah Grass', sand: 'Sand', dirt: 'Dirt',
+                rainforest_floor: 'Rainforest Floor', brown_stone: 'Brown Stone', gray_stone: 'Gray Stone',
+                gravel: 'Gravel', snow: 'Snow', fresh_water: 'Fresh Water', salt_water: 'Salt Water',
+                deciduous_floor: 'Deciduous Floor', coniferous_floor: 'Coniferous Floor'
             };
             terrainEl.innerHTML = Object.entries(info.terrainNeeds)
                 .map(([terrain, pct]) => {
@@ -967,7 +978,7 @@ export class InputHandler {
         if (nameEl) nameEl.textContent = foliageType.name;
         if (biomeEl) {
             const biomeNames: Record<string, string> = {
-                savanna: 'Savanna Biome',
+                savanna_grass: 'Savannah Biome',
                 prairie: 'Prairie Biome'
             };
             biomeEl.textContent = biomeNames[foliageType.biome] || foliageType.biome;
@@ -3195,7 +3206,9 @@ export class InputHandler {
      */
     private placeTerrain(centerX: number, centerY: number, terrainType: string): void {
         const costs: Record<string, number> = {
-            grass: 10, dirt: 5, sand: 15, water: 50, savanna: 20, prairie: 18
+            grass: 10, prairie: 12, savanna_grass: 15, sand: 8, dirt: 5,
+            rainforest_floor: 20, brown_stone: 15, gray_stone: 15, gravel: 10,
+            snow: 25, fresh_water: 50, salt_water: 55, deciduous_floor: 18, coniferous_floor: 18
         };
 
         const costPerTile = costs[terrainType] || 10;
@@ -3219,7 +3232,7 @@ export class InputHandler {
                 if (previousTerrain === terrainType) continue;
 
                 // For water, check if tile is occupied
-                if (terrainType === 'water' && this.isTileOccupied(x, y)) {
+                if ((terrainType === 'fresh_water' || terrainType === 'salt_water') && this.isTileOccupied(x, y)) {
                     continue;
                 }
 
@@ -3287,7 +3300,7 @@ export class InputHandler {
         if (!tile) return;
 
         // Can't place paths on water
-        if (tile.terrain === 'water') return;
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return;
 
         // Can't place paths under buildings
         if (this.game.getPlaceableAtTile(x, y)) return;
@@ -3940,7 +3953,7 @@ export class InputHandler {
             if (!existingTile) continue;
 
             // Can't place paths on water
-            if (existingTile.terrain === 'water') continue;
+            if (existingTile.terrain === 'fresh_water' || existingTile.terrain === 'salt_water') continue;
 
             // Can't place paths under buildings
             if (this.game.getPlaceableAtTile(tile.x, tile.y)) continue;
@@ -3980,7 +3993,7 @@ export class InputHandler {
         const tile = this.game.world.getTile(x, y);
 
         // Can't place on water
-        if (!tile || tile.terrain === 'water') return;
+        if (!tile || tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return;
 
         if (this.game.spendMoney(cost)) {
             const animal = this.game.addAnimal(species as AnimalSpecies, x, y, this.selectedGender);
@@ -4007,7 +4020,7 @@ export class InputHandler {
         const tile = this.game.world.getTile(x, y);
 
         // Can't place on water
-        if (!tile || tile.terrain === 'water') return;
+        if (!tile || tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return;
 
         if (this.game.spendMoney(cost)) {
             const staff = this.game.addStaff(staffType, x, y);
@@ -4324,7 +4337,7 @@ export class InputHandler {
                 for (const tile of tiles) {
                     const existingTile = this.game.world.getTile(tile.x, tile.y);
                     if (!existingTile) continue;
-                    if (existingTile.terrain === 'water') continue;
+                    if (existingTile.terrain === 'fresh_water' || existingTile.terrain === 'salt_water') continue;
                     if (this.game.getPlaceableAtTile(tile.x, tile.y)) continue;
                     this.game.world.setPath(tile.x, tile.y, pathType);
                 }

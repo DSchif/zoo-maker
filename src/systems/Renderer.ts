@@ -3620,6 +3620,495 @@ export class Renderer {
                 break;
             }
 
+            case 'thornless_mesquite': {
+                // Spreading shade tree with feathery foliage
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Twisted trunk
+                graphics.moveTo(x - 3 * scale, y);
+                graphics.quadraticCurveTo(x - 5 * scale, y - 20 * scale, x, y - 40 * scale);
+                graphics.lineTo(x + 4 * scale, y - 38 * scale);
+                graphics.quadraticCurveTo(x + 2 * scale, y - 18 * scale, x + 3 * scale, y);
+                graphics.fill(0x5a4030);
+
+                // Spreading canopy
+                graphics.ellipse(x - 12 * scale, y - 45 * scale, 18 * scale, 12 * scale);
+                graphics.fill(0x3a6a2a);
+                graphics.ellipse(x + 14 * scale, y - 42 * scale, 16 * scale, 10 * scale);
+                graphics.fill(0x4a7a3a);
+                graphics.ellipse(x, y - 50 * scale, 20 * scale, 14 * scale);
+                graphics.fill(0x3a7030);
+
+                // Feathery leaf texture
+                for (let i = 0; i < 12; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 50 * scale;
+                    const ly = y - 45 * scale + (seededRandom(i + 10) - 0.5) * 20 * scale;
+                    graphics.ellipse(lx, ly, 3 * scale, 1.5 * scale);
+                    graphics.fill(0x5a8a4a);
+                }
+                break;
+            }
+
+            case 'maple_tree': {
+                // Classic maple with star-shaped leaves
+                graphics.ellipse(x, y + 5, 28 * scale, 12 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 5 * scale, y - 45 * scale, 10 * scale, 50 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Rounded crown
+                graphics.ellipse(x, y - 55 * scale, 30 * scale, 22 * scale);
+                graphics.fill(0x2a6a1a);
+
+                // Maple leaf clusters (mix of green and orange/red for fall color)
+                const mapleColors = [0x3a7a2a, 0x4a8a3a, 0xc44a20, 0xd4642a];
+                for (let i = 0; i < 16; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 55 * scale;
+                    const ly = y - 55 * scale + (seededRandom(i + 10) - 0.5) * 38 * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 20) * mapleColors.length);
+                    // Star-shaped leaf approximation
+                    graphics.circle(lx, ly, 4 * scale);
+                    graphics.fill(mapleColors[colorIdx]);
+                }
+                break;
+            }
+
+            case 'elm_tree': {
+                // Vase-shaped canopy
+                graphics.ellipse(x, y + 5, 26 * scale, 11 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 5 * scale, y - 48 * scale, 10 * scale, 53 * scale);
+                graphics.fill(0x4a3a2a);
+
+                // Vase-shaped crown (wider at top)
+                graphics.moveTo(x - 8 * scale, y - 45 * scale);
+                graphics.quadraticCurveTo(x - 30 * scale, y - 60 * scale, x - 25 * scale, y - 75 * scale);
+                graphics.lineTo(x + 25 * scale, y - 75 * scale);
+                graphics.quadraticCurveTo(x + 30 * scale, y - 60 * scale, x + 8 * scale, y - 45 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // Leaf texture
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 45 * scale;
+                    const ly = y - 60 * scale + (seededRandom(i + 10) - 0.5) * 25 * scale;
+                    graphics.ellipse(lx, ly, 4 * scale, 2 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a7a3a : 0x5a8a4a);
+                }
+                break;
+            }
+
+            case 'gingko_tree': {
+                // Ancient tree with fan-shaped leaves
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Straight trunk
+                graphics.rect(x - 4 * scale, y - 50 * scale, 8 * scale, 55 * scale);
+                graphics.fill(0x6a5a4a);
+
+                // Conical crown
+                graphics.moveTo(x, y - 70 * scale);
+                graphics.lineTo(x - 22 * scale, y - 40 * scale);
+                graphics.lineTo(x + 22 * scale, y - 40 * scale);
+                graphics.closePath();
+                graphics.fill(0x7a9a3a);
+
+                // Fan-shaped leaves (golden-green)
+                for (let i = 0; i < 12; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 38 * scale;
+                    const ly = y - 55 * scale + (seededRandom(i + 10) - 0.5) * 25 * scale;
+                    // Fan shape
+                    graphics.moveTo(lx, ly + 3 * scale);
+                    graphics.lineTo(lx - 3 * scale, ly - 3 * scale);
+                    graphics.lineTo(lx + 3 * scale, ly - 3 * scale);
+                    graphics.closePath();
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x8aaa4a : 0x9aba5a);
+                }
+                break;
+            }
+
+            case 'weeping_willow': {
+                // Graceful tree with drooping branches
+                graphics.ellipse(x, y + 6, 35 * scale, 14 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 5 * scale, y - 45 * scale, 10 * scale, 50 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Main crown
+                graphics.ellipse(x, y - 50 * scale, 28 * scale, 18 * scale);
+                graphics.fill(0x4a7a3a);
+
+                // Long drooping branches
+                for (let i = 0; i < 14; i++) {
+                    const startX = x + (seededRandom(i) - 0.5) * 40 * scale;
+                    const startY = y - 50 * scale + seededRandom(i + 10) * 10 * scale;
+                    const endX = startX + (seededRandom(i + 20) - 0.5) * 10 * scale;
+                    const endY = y - 5 * scale + seededRandom(i + 30) * 10 * scale;
+                    graphics.moveTo(startX, startY);
+                    graphics.quadraticCurveTo(startX, (startY + endY) / 2, endX, endY);
+                    graphics.stroke({ color: 0x5a8a4a, width: 1.5 });
+                }
+                break;
+            }
+
+            case 'birch_tree': {
+                // White bark, slender
+                graphics.ellipse(x, y + 4, 20 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // White trunk
+                graphics.rect(x - 3 * scale, y - 55 * scale, 6 * scale, 60 * scale);
+                graphics.fill(0xe8e0d8);
+
+                // Black bark marks
+                for (let i = 0; i < 8; i++) {
+                    const markY = y - 5 * scale - i * 7 * scale;
+                    const markW = (2 + seededRandom(i) * 3) * scale;
+                    graphics.rect(x - markW / 2, markY, markW, 2 * scale);
+                    graphics.fill(0x2a2a2a);
+                }
+
+                // Light airy crown
+                graphics.ellipse(x, y - 62 * scale, 22 * scale, 16 * scale);
+                graphics.fill({ color: 0x5a9a4a, alpha: 0.85 });
+
+                // Small leaves
+                for (let i = 0; i < 12; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 38 * scale;
+                    const ly = y - 62 * scale + (seededRandom(i + 10) - 0.5) * 26 * scale;
+                    graphics.ellipse(lx, ly, 3 * scale, 2 * scale);
+                    graphics.fill(0x6aaa5a);
+                }
+                break;
+            }
+
+            case 'white_oak': {
+                // Majestic spreading crown
+                graphics.ellipse(x, y + 6, 32 * scale, 14 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Thick trunk
+                graphics.rect(x - 6 * scale, y - 40 * scale, 12 * scale, 46 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Spreading branches
+                graphics.moveTo(x - 4 * scale, y - 38 * scale);
+                graphics.lineTo(x - 25 * scale, y - 50 * scale);
+                graphics.stroke({ color: 0x5a4a3a, width: 4 * scale });
+                graphics.moveTo(x + 4 * scale, y - 36 * scale);
+                graphics.lineTo(x + 28 * scale, y - 48 * scale);
+                graphics.stroke({ color: 0x5a4a3a, width: 4 * scale });
+
+                // Wide crown
+                graphics.ellipse(x, y - 55 * scale, 38 * scale, 24 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // Lobed oak leaves
+                for (let i = 0; i < 16; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 68 * scale;
+                    const ly = y - 55 * scale + (seededRandom(i + 10) - 0.5) * 42 * scale;
+                    graphics.ellipse(lx, ly, 5 * scale, 3 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a7a3a : 0x3a6a2a);
+                }
+                break;
+            }
+
+            case 'cherry_tree': {
+                // Flowering tree with pink blossoms
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Dark trunk
+                graphics.rect(x - 4 * scale, y - 42 * scale, 8 * scale, 47 * scale);
+                graphics.fill(0x4a3028);
+
+                // Rounded crown with blossoms
+                graphics.ellipse(x, y - 52 * scale, 26 * scale, 18 * scale);
+                graphics.fill(0x4a7a3a);
+
+                // Pink blossoms
+                const blossomColors = [0xffb0c0, 0xffc0d0, 0xffa0b0, 0xffd0e0];
+                for (let i = 0; i < 20; i++) {
+                    const bx = x + (seededRandom(i) - 0.5) * 48 * scale;
+                    const by = y - 52 * scale + (seededRandom(i + 10) - 0.5) * 32 * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 20) * blossomColors.length);
+                    graphics.circle(bx, by, (2 + seededRandom(i + 30)) * scale);
+                    graphics.fill(blossomColors[colorIdx]);
+                }
+                break;
+            }
+
+            case 'trembling_aspen': {
+                // Slender with round leaves
+                graphics.ellipse(x, y + 4, 20 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Pale trunk
+                graphics.rect(x - 3 * scale, y - 55 * scale, 6 * scale, 60 * scale);
+                graphics.fill(0xc8c0b0);
+
+                // Narrow crown
+                graphics.ellipse(x, y - 58 * scale, 18 * scale, 22 * scale);
+                graphics.fill(0x5a9a4a);
+
+                // Round quivering leaves
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 32 * scale;
+                    const ly = y - 58 * scale + (seededRandom(i + 10) - 0.5) * 38 * scale;
+                    graphics.circle(lx, ly, 2.5 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x6aaa5a : 0x7aba6a);
+                }
+                break;
+            }
+
+            case 'bonsai': {
+                // Miniature ornamental tree
+                graphics.ellipse(x, y + 2, 12 * scale, 5 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Small gnarled trunk
+                graphics.moveTo(x - 2 * scale, y);
+                graphics.quadraticCurveTo(x - 4 * scale, y - 8 * scale, x, y - 15 * scale);
+                graphics.lineTo(x + 2 * scale, y - 14 * scale);
+                graphics.quadraticCurveTo(x + 3 * scale, y - 7 * scale, x + 2 * scale, y);
+                graphics.fill(0x5a4030);
+
+                // Small shaped crown
+                graphics.ellipse(x - 4 * scale, y - 18 * scale, 8 * scale, 5 * scale);
+                graphics.fill(0x2a5a1a);
+                graphics.ellipse(x + 5 * scale, y - 16 * scale, 6 * scale, 4 * scale);
+                graphics.fill(0x3a6a2a);
+                graphics.ellipse(x, y - 20 * scale, 7 * scale, 5 * scale);
+                graphics.fill(0x2a6a1a);
+                break;
+            }
+
+            case 'snowbell_tree': {
+                // Small tree with white bell flowers
+                graphics.ellipse(x, y + 4, 16 * scale, 6 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.18 });
+
+                // Slender trunk
+                graphics.rect(x - 2.5 * scale, y - 35 * scale, 5 * scale, 39 * scale);
+                graphics.fill(0x6a5a4a);
+
+                // Rounded crown
+                graphics.ellipse(x, y - 42 * scale, 18 * scale, 14 * scale);
+                graphics.fill(0x4a7a3a);
+
+                // White bell-shaped flowers
+                for (let i = 0; i < 10; i++) {
+                    const fx = x + (seededRandom(i) - 0.5) * 30 * scale;
+                    const fy = y - 42 * scale + (seededRandom(i + 10) - 0.5) * 22 * scale;
+                    graphics.moveTo(fx, fy - 3 * scale);
+                    graphics.lineTo(fx - 2 * scale, fy + 2 * scale);
+                    graphics.lineTo(fx + 2 * scale, fy + 2 * scale);
+                    graphics.closePath();
+                    graphics.fill(0xffffff);
+                }
+                break;
+            }
+
+            case 'japanese_maple': {
+                // Ornamental with delicate red leaves
+                graphics.ellipse(x, y + 4, 20 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Elegant trunk
+                graphics.moveTo(x - 3 * scale, y);
+                graphics.quadraticCurveTo(x - 2 * scale, y - 18 * scale, x, y - 35 * scale);
+                graphics.lineTo(x + 3 * scale, y - 34 * scale);
+                graphics.quadraticCurveTo(x + 2 * scale, y - 17 * scale, x + 3 * scale, y);
+                graphics.fill(0x5a4030);
+
+                // Spreading crown
+                graphics.ellipse(x, y - 42 * scale, 24 * scale, 14 * scale);
+                graphics.fill(0x8a2020);
+
+                // Delicate red/purple leaves
+                const jmColors = [0xa03030, 0xb04040, 0x902020, 0xc05050];
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 42 * scale;
+                    const ly = y - 42 * scale + (seededRandom(i + 10) - 0.5) * 24 * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 20) * jmColors.length);
+                    graphics.circle(lx, ly, 2 * scale);
+                    graphics.fill(jmColors[colorIdx]);
+                }
+                break;
+            }
+
+            case 'deciduous_bush': {
+                // Common leafy shrub
+                graphics.ellipse(x, y + 3, 16 * scale, 6 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.15 });
+
+                // Bush body
+                graphics.ellipse(x, y - 8 * scale, 18 * scale, 14 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // Leaf clusters
+                for (let i = 0; i < 12; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 32 * scale;
+                    const ly = y - 8 * scale + (seededRandom(i + 10) - 0.5) * 22 * scale;
+                    graphics.ellipse(lx, ly, 4 * scale, 3 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x4a7a3a : 0x5a8a4a);
+                }
+
+                // Highlight
+                graphics.ellipse(x - 3 * scale, y - 14 * scale, 8 * scale, 4 * scale);
+                graphics.fill({ color: 0x6a9a5a, alpha: 0.4 });
+                break;
+            }
+
+            case 'glossopteris': {
+                // Prehistoric seed fern
+                graphics.ellipse(x, y + 5, 22 * scale, 9 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 4 * scale, y - 48 * scale, 8 * scale, 53 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Fern-like crown
+                graphics.ellipse(x, y - 55 * scale, 24 * scale, 16 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // Tongue-shaped leaves (glossopteris means tongue-fern)
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i / 10) * Math.PI * 2;
+                    const lx = x + Math.cos(angle) * 18 * scale;
+                    const ly = y - 55 * scale + Math.sin(angle) * 10 * scale;
+                    graphics.ellipse(lx, ly, 6 * scale, 3 * scale);
+                    graphics.fill(0x4a7a3a);
+                }
+                break;
+            }
+
+            case 'magnolia_tree': {
+                // Ancient flowering tree
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 5 * scale, y - 45 * scale, 10 * scale, 50 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Rounded crown
+                graphics.ellipse(x, y - 52 * scale, 26 * scale, 18 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // Large white/pink flowers
+                const magColors = [0xfff0f5, 0xffe0e8, 0xffd0d8];
+                for (let i = 0; i < 8; i++) {
+                    const fx = x + (seededRandom(i) - 0.5) * 44 * scale;
+                    const fy = y - 52 * scale + (seededRandom(i + 10) - 0.5) * 28 * scale;
+                    const colorIdx = Math.floor(seededRandom(i + 20) * magColors.length);
+                    graphics.circle(fx, fy, (4 + seededRandom(i + 30) * 2) * scale);
+                    graphics.fill(magColors[colorIdx]);
+                }
+                break;
+            }
+
+            case 'globe_willow': {
+                // Round-crowned willow
+                graphics.ellipse(x, y + 6, 30 * scale, 13 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 5 * scale, y - 40 * scale, 10 * scale, 46 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Spherical crown
+                graphics.circle(x, y - 55 * scale, 28 * scale);
+                graphics.fill(0x4a8a3a);
+
+                // Dense leaf texture
+                for (let i = 0; i < 18; i++) {
+                    const angle = seededRandom(i) * Math.PI * 2;
+                    const dist = seededRandom(i + 10) * 24;
+                    const lx = x + Math.cos(angle) * dist * scale;
+                    const ly = y - 55 * scale + Math.sin(angle) * dist * scale;
+                    graphics.ellipse(lx, ly, 4 * scale, 2 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x5a9a4a : 0x6aaa5a);
+                }
+                break;
+            }
+
+            case 'wild_olive': {
+                // Gnarled Mediterranean tree
+                graphics.ellipse(x, y + 5, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Gnarled twisted trunk
+                graphics.moveTo(x - 5 * scale, y);
+                graphics.quadraticCurveTo(x - 8 * scale, y - 15 * scale, x - 3 * scale, y - 35 * scale);
+                graphics.lineTo(x + 4 * scale, y - 33 * scale);
+                graphics.quadraticCurveTo(x + 7 * scale, y - 12 * scale, x + 5 * scale, y);
+                graphics.fill(0x6a5a4a);
+
+                // Silvery-green crown
+                graphics.ellipse(x, y - 45 * scale, 26 * scale, 18 * scale);
+                graphics.fill(0x7a9a6a);
+
+                // Silvery olive leaves
+                for (let i = 0; i < 14; i++) {
+                    const lx = x + (seededRandom(i) - 0.5) * 46 * scale;
+                    const ly = y - 45 * scale + (seededRandom(i + 10) - 0.5) * 30 * scale;
+                    graphics.ellipse(lx, ly, 4 * scale, 1.5 * scale);
+                    graphics.fill(seededRandom(i + 20) > 0.5 ? 0x8aaa7a : 0x9aba8a);
+                }
+
+                // Small olives
+                if (seededRandom(888) > 0.5) {
+                    for (let i = 0; i < 4; i++) {
+                        const ox = x + (seededRandom(i + 300) - 0.5) * 30 * scale;
+                        const oy = y - 40 * scale + seededRandom(i + 310) * 15 * scale;
+                        graphics.circle(ox, oy, 2 * scale);
+                        graphics.fill(0x4a6a3a);
+                    }
+                }
+                break;
+            }
+
+            case 'pacific_dogwood': {
+                // Flowering tree from Western North America
+                graphics.ellipse(x, y + 4, 20 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Trunk
+                graphics.rect(x - 3 * scale, y - 38 * scale, 6 * scale, 42 * scale);
+                graphics.fill(0x5a4a3a);
+
+                // Crown
+                graphics.ellipse(x, y - 45 * scale, 22 * scale, 16 * scale);
+                graphics.fill(0x3a6a2a);
+
+                // White dogwood flowers (4 petal pattern)
+                for (let i = 0; i < 8; i++) {
+                    const fx = x + (seededRandom(i) - 0.5) * 38 * scale;
+                    const fy = y - 45 * scale + (seededRandom(i + 10) - 0.5) * 26 * scale;
+                    // Four petals
+                    for (let p = 0; p < 4; p++) {
+                        const pAngle = (p / 4) * Math.PI * 2;
+                        const px = fx + Math.cos(pAngle) * 3 * scale;
+                        const py = fy + Math.sin(pAngle) * 3 * scale;
+                        graphics.ellipse(px, py, 2.5 * scale, 1.5 * scale);
+                        graphics.fill(0xffffff);
+                    }
+                    // Yellow center
+                    graphics.circle(fx, fy, 1.5 * scale);
+                    graphics.fill(0xffee00);
+                }
+                break;
+            }
+
             default: {
                 // Generic plant with more detail
                 graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);

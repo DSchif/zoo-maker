@@ -113,7 +113,26 @@ export type FoliageType =
     | 'wildflowers'
     // Grassland biome
     | 'broadleaf_bush'
-    | 'monkey_puzzle_tree';
+    | 'monkey_puzzle_tree'
+    // Deciduous forest biome
+    | 'thornless_mesquite'
+    | 'maple_tree'
+    | 'elm_tree'
+    | 'gingko_tree'
+    | 'weeping_willow'
+    | 'birch_tree'
+    | 'white_oak'
+    | 'cherry_tree'
+    | 'trembling_aspen'
+    | 'bonsai'
+    | 'snowbell_tree'
+    | 'japanese_maple'
+    | 'deciduous_bush'
+    | 'glossopteris'
+    | 'magnolia_tree'
+    | 'globe_willow'
+    | 'wild_olive'
+    | 'pacific_dogwood';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

@@ -403,11 +403,18 @@ export class InputHandler {
             this.game.showInteractionPoints = showInteractionsToggle.checked;
         });
 
-        // Touch mode toggle
+        // Touch mode toggle - load cached setting
         const touchModeToggle = document.getElementById('touch-mode-toggle') as HTMLInputElement;
-        touchModeToggle?.addEventListener('change', () => {
-            this.setTouchMode(touchModeToggle.checked);
-        });
+        if (touchModeToggle) {
+            const cachedTouchMode = localStorage.getItem('touchMode');
+            if (cachedTouchMode === 'true') {
+                touchModeToggle.checked = true;
+                this.setTouchMode(true);
+            }
+            touchModeToggle.addEventListener('change', () => {
+                this.setTouchMode(touchModeToggle.checked);
+            });
+        }
 
         // Touch control buttons
         const touchRotateBtn = document.getElementById('touch-rotate-btn');
@@ -4123,6 +4130,9 @@ export class InputHandler {
      */
     setTouchMode(enabled: boolean): void {
         this.touchMode = enabled;
+
+        // Cache the setting
+        localStorage.setItem('touchMode', enabled ? 'true' : 'false');
 
         // Toggle body class for CSS styling
         if (enabled) {

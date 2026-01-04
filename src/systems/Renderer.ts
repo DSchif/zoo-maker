@@ -5163,6 +5163,232 @@ export class Renderer {
                 break;
             }
 
+            // ================== HIGHLAND BIOME (gray_stone) ==================
+
+            case 'sage_bush': {
+                // Aromatic shrub
+                graphics.ellipse(x, y + 4, 16 * scale, 7 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                // Silvery-green sage foliage
+                graphics.circle(x, y - 6 * scale, 14 * scale);
+                graphics.fill(0x6a8a6a);
+                graphics.circle(x - 5 * scale, y - 10 * scale, 10 * scale);
+                graphics.fill(0x7a9a7a);
+                graphics.circle(x + 6 * scale, y - 8 * scale, 9 * scale);
+                graphics.fill(0x6a8a6a);
+
+                // Small purple flower spikes
+                for (let i = 0; i < 4; i++) {
+                    const fx = x - 8 * scale + i * 5 * scale;
+                    const fy = y - 14 * scale + seededRandom(foliage.id + i) * 4 * scale;
+                    graphics.rect(fx, fy, 2 * scale, 6 * scale);
+                    graphics.fill(0x8a6a9a);
+                }
+                break;
+            }
+
+            case 'himalayan_birch_tree': {
+                // White-barked birch from high mountains
+                graphics.ellipse(x, y + 6, 22 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const himBirchH = 55 * scale;
+                // Distinctive white bark with horizontal marks
+                graphics.rect(x - 4 * scale, y - himBirchH * 0.7, 8 * scale, himBirchH * 0.7);
+                graphics.fill(0xf0f0e8);
+
+                // Horizontal bark markings
+                for (let i = 0; i < 8; i++) {
+                    graphics.moveTo(x - 4 * scale, y - i * 5 * scale);
+                    graphics.lineTo(x + 4 * scale, y - i * 5 * scale);
+                    graphics.stroke({ color: 0x3a3a3a, width: 0.5 });
+                }
+
+                // Branches
+                graphics.moveTo(x, y - himBirchH * 0.5);
+                graphics.lineTo(x - 12 * scale, y - himBirchH * 0.75);
+                graphics.stroke({ color: 0xe8e8e0, width: 2 * scale });
+                graphics.moveTo(x, y - himBirchH * 0.55);
+                graphics.lineTo(x + 14 * scale, y - himBirchH * 0.8);
+                graphics.stroke({ color: 0xe8e8e0, width: 2 * scale });
+
+                // Foliage
+                graphics.ellipse(x, y - himBirchH, 20 * scale, 14 * scale);
+                graphics.fill(0x4a7a4a);
+                graphics.ellipse(x - 10 * scale, y - himBirchH * 0.85, 14 * scale, 10 * scale);
+                graphics.fill(0x5a8a5a);
+                graphics.ellipse(x + 12 * scale, y - himBirchH * 0.9, 12 * scale, 9 * scale);
+                graphics.fill(0x4a7a4a);
+                break;
+            }
+
+            case 'western_larch_tree': {
+                // Deciduous conifer
+                graphics.ellipse(x, y + 6, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const larchH = 60 * scale;
+                // Reddish-brown trunk
+                graphics.rect(x - 5 * scale, y - larchH * 0.8, 10 * scale, larchH * 0.8);
+                graphics.fill(0x6a4a3a);
+
+                // Conical shape with layered branches
+                for (let i = 0; i < 6; i++) {
+                    const layerY = y - larchH * 0.3 - i * 8 * scale;
+                    const layerWidth = (20 - i * 2.5) * scale;
+                    graphics.moveTo(x, layerY - 8 * scale);
+                    graphics.lineTo(x - layerWidth, layerY);
+                    graphics.lineTo(x + layerWidth, layerY);
+                    graphics.closePath();
+                    graphics.fill(i % 2 === 0 ? 0x5a8a5a : 0x4a7a4a);
+                }
+                break;
+            }
+
+            case 'paper_birch_tree': {
+                // White birch with peeling bark
+                graphics.ellipse(x, y + 6, 20 * scale, 9 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const paperH = 50 * scale;
+                // White trunk
+                graphics.rect(x - 4 * scale, y - paperH * 0.65, 8 * scale, paperH * 0.65);
+                graphics.fill(0xf8f8f0);
+
+                // Peeling bark texture
+                for (let i = 0; i < 5; i++) {
+                    const py = y - 5 * scale - i * 6 * scale;
+                    graphics.moveTo(x - 3 * scale, py);
+                    graphics.quadraticCurveTo(x - 6 * scale, py - 2 * scale, x - 4 * scale, py - 4 * scale);
+                    graphics.stroke({ color: 0xe8e0d8, width: 1 });
+                }
+
+                // Dark horizontal marks
+                for (let i = 0; i < 6; i++) {
+                    const my = y - 3 * scale - i * 5 * scale;
+                    graphics.ellipse(x, my, 2 * scale, 0.5 * scale);
+                    graphics.fill(0x2a2a2a);
+                }
+
+                // Multiple thin trunks (clump form)
+                graphics.rect(x + 3 * scale, y - paperH * 0.5, 4 * scale, paperH * 0.5);
+                graphics.fill(0xf0f0e8);
+
+                // Foliage
+                graphics.ellipse(x, y - paperH, 18 * scale, 14 * scale);
+                graphics.fill(0x5a9a5a);
+                graphics.ellipse(x + 8 * scale, y - paperH * 0.7, 12 * scale, 10 * scale);
+                graphics.fill(0x4a8a4a);
+                break;
+            }
+
+            case 'western_juniper_tree': {
+                // Gnarled evergreen
+                graphics.ellipse(x, y + 6, 24 * scale, 10 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const juniperH = 50 * scale;
+                // Twisted gnarled trunk
+                graphics.moveTo(x - 6 * scale, y);
+                graphics.quadraticCurveTo(x - 8 * scale, y - juniperH * 0.3, x - 3 * scale, y - juniperH * 0.5);
+                graphics.quadraticCurveTo(x + 2 * scale, y - juniperH * 0.6, x, y - juniperH * 0.7);
+                graphics.lineTo(x + 4 * scale, y - juniperH * 0.7);
+                graphics.quadraticCurveTo(x + 6 * scale, y - juniperH * 0.5, x + 5 * scale, y - juniperH * 0.3);
+                graphics.quadraticCurveTo(x + 6 * scale, y - juniperH * 0.15, x + 6 * scale, y);
+                graphics.closePath();
+                graphics.fill(0x7a6a5a);
+
+                // Irregular, spreading foliage clumps
+                graphics.ellipse(x - 8 * scale, y - juniperH * 0.6, 14 * scale, 10 * scale);
+                graphics.fill(0x4a6a4a);
+                graphics.ellipse(x + 10 * scale, y - juniperH * 0.75, 12 * scale, 9 * scale);
+                graphics.fill(0x3a5a3a);
+                graphics.ellipse(x, y - juniperH, 16 * scale, 12 * scale);
+                graphics.fill(0x4a6a4a);
+                graphics.ellipse(x - 5 * scale, y - juniperH * 0.85, 10 * scale, 8 * scale);
+                graphics.fill(0x5a7a5a);
+
+                // Blue berries
+                for (let i = 0; i < 5; i++) {
+                    const bx = x + (seededRandom(foliage.id + i) - 0.5) * 20 * scale;
+                    const by = y - juniperH * 0.7 + (seededRandom(foliage.id + i + 5) - 0.5) * 15 * scale;
+                    graphics.circle(bx, by, 1.5 * scale);
+                    graphics.fill(0x4a6a8a);
+                }
+                break;
+            }
+
+            case 'himalayan_pine_tree': {
+                // Elegant mountain pine
+                graphics.ellipse(x, y + 6, 26 * scale, 12 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const himPineH = 70 * scale;
+                // Tall straight trunk
+                graphics.rect(x - 5 * scale, y - himPineH * 0.85, 10 * scale, himPineH * 0.85);
+                graphics.fill(0x5a4a3a);
+
+                // Elegant layered branches - wider spacing
+                for (let i = 0; i < 7; i++) {
+                    const layerY = y - himPineH * 0.25 - i * 9 * scale;
+                    const layerWidth = (25 - i * 3) * scale;
+
+                    // Long drooping needle clusters
+                    for (let j = -3; j <= 3; j++) {
+                        const bx = x + j * (layerWidth / 4);
+                        graphics.moveTo(x, layerY);
+                        graphics.quadraticCurveTo(bx, layerY + 5 * scale, bx + j * 2 * scale, layerY + 10 * scale);
+                        graphics.stroke({ color: 0x3a6a4a, width: 2.5 * scale });
+                    }
+                }
+
+                // Top tuft
+                graphics.ellipse(x, y - himPineH, 8 * scale, 10 * scale);
+                graphics.fill(0x4a7a5a);
+                break;
+            }
+
+            case 'bamboo': {
+                // Tall bamboo culms
+                graphics.ellipse(x, y + 4, 18 * scale, 8 * scale);
+                graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+                const bambooH = 65 * scale;
+
+                // Multiple bamboo culms
+                for (let culm = 0; culm < 5; culm++) {
+                    const cx = x - 8 * scale + culm * 4 * scale;
+                    const culmHeight = bambooH * (0.8 + seededRandom(foliage.id + culm) * 0.2);
+
+                    // Green culm with segments
+                    graphics.rect(cx - 1.5 * scale, y - culmHeight, 3 * scale, culmHeight);
+                    graphics.fill(0x5a8a4a);
+
+                    // Node rings
+                    for (let node = 0; node < 8; node++) {
+                        const ny = y - node * 7 * scale;
+                        graphics.rect(cx - 2 * scale, ny - 1 * scale, 4 * scale, 2 * scale);
+                        graphics.fill(0x4a7a3a);
+                    }
+
+                    // Leaves at top
+                    for (let leaf = 0; leaf < 4; leaf++) {
+                        const angle = (leaf / 4) * Math.PI * 2 + culm;
+                        const lx = cx + Math.cos(angle) * 8 * scale;
+                        const ly = y - culmHeight + Math.sin(angle) * 4 * scale;
+                        graphics.moveTo(cx, y - culmHeight);
+                        graphics.quadraticCurveTo(
+                            cx + Math.cos(angle) * 5 * scale,
+                            y - culmHeight - 3 * scale,
+                            lx, ly
+                        );
+                        graphics.stroke({ color: 0x6a9a5a, width: 2 * scale });
+                    }
+                }
+                break;
+            }
+
             default: {
                 // Generic plant with more detail
                 graphics.ellipse(x, y + 3, 14 * scale, 6 * scale);

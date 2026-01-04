@@ -704,6 +704,14 @@ export class InputHandler {
                 { id: 'elephant_ear_tree', name: 'Elephant Ear Tree', cost: 185, icon: '🌳', biome: 'rainforest_floor' },
                 { id: 'williamsonia_tree', name: 'Williamsonia Tree', cost: 200, icon: '🌴', biome: 'rainforest_floor' },
                 { id: 'kapok_tree', name: 'Kapok Tree', cost: 230, icon: '🌳', biome: 'rainforest_floor' },
+                // Highland (gray_stone)
+                { id: 'sage_bush', name: 'Sage Bush', cost: 65, icon: '🌿', biome: 'gray_stone' },
+                { id: 'himalayan_birch_tree', name: 'Himalayan Birch Tree', cost: 125, icon: '🌳', biome: 'gray_stone' },
+                { id: 'western_larch_tree', name: 'Western Larch Tree', cost: 125, icon: '🌲', biome: 'gray_stone' },
+                { id: 'paper_birch_tree', name: 'Paper Birch Tree', cost: 125, icon: '🌳', biome: 'gray_stone' },
+                { id: 'western_juniper_tree', name: 'Western Juniper Tree', cost: 125, icon: '🌲', biome: 'gray_stone' },
+                { id: 'himalayan_pine_tree', name: 'Himalayan Pine Tree', cost: 180, icon: '🌲', biome: 'gray_stone' },
+                { id: 'bamboo', name: 'Bamboo', cost: 500, icon: '🎋', biome: 'gray_stone' },
             ],
             shelter: [
                 { id: 'concrete_small', name: 'Small Shelter (2x1)', cost: 500, icon: '🏠' },
@@ -835,6 +843,7 @@ export class InputHandler {
             coniferous_floor: '🌲',
             rainforest_floor: '🌴',
             rainforest: '🌴',
+            gray_stone: '🏔️',
             temperate: '🌲',
             tundra: '❄️',
         };

@@ -166,7 +166,15 @@ export type FoliageType =
     | 'llala_palm_tree'
     | 'elephant_ear_tree'
     | 'williamsonia_tree'
-    | 'kapok_tree';
+    | 'kapok_tree'
+    // Highland biome (gray_stone)
+    | 'sage_bush'
+    | 'himalayan_birch_tree'
+    | 'western_larch_tree'
+    | 'paper_birch_tree'
+    | 'western_juniper_tree'
+    | 'himalayan_pine_tree'
+    | 'bamboo';
 
 // Shelter types and sizes
 export type ShelterType = 'concrete';

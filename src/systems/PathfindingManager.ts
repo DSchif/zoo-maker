@@ -183,7 +183,8 @@ export class PathfindingManager {
         endY: number,
         canUsePaths: boolean = true,
         canPassGates: boolean = false,
-        maxOffPathDistance?: number
+        maxOffPathDistance?: number,
+        waterAffinity?: number
     ): Promise<GridPos[]> {
         if (!this.ready) {
             await this.readyPromise;
@@ -202,6 +203,7 @@ export class PathfindingManager {
                 canUsePaths,
                 canPassGates,
                 maxOffPathDistance,
+                waterAffinity,
             };
 
             this.pendingRequests.set(id, (response) => {

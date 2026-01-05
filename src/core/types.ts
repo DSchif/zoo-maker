@@ -211,7 +211,7 @@ export type FoodType = 'meat' | 'vegetables' | 'fruit' | 'hay';
 export type GuestFoodCategory = 'fast_food' | 'restaurant' | 'snack' | 'dessert';
 
 // Animal state
-export type AnimalState = 'idle' | 'walking' | 'eating' | 'sleeping' | 'resting';
+export type AnimalState = 'idle' | 'walking' | 'eating' | 'sleeping' | 'resting' | 'swimming';
 
 // Staff types
 export type StaffType = 'zookeeper' | 'maintenance';
@@ -233,6 +233,7 @@ export interface PathRequest {
     canUsePaths: boolean;  // Staff can, animals can't
     canPassGates: boolean; // Staff can, animals can't
     maxOffPathDistance?: number; // Max tiles away from a path (for guests)
+    waterAffinity?: number; // 0-1: If > 0, can path through water tiles
 }
 
 export interface PathResponse {

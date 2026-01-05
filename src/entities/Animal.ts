@@ -27,6 +27,8 @@ export interface AnimalConfig {
     needsShelter?: boolean;  // Whether this animal needs shelter for happiness
     maturityAge?: number;
     breedingConfig?: BreedingConfig;
+    waterAffinity?: number;  // 0-1: How much the animal likes water (0 = avoids, 1 = loves)
+    waterSpriteCutoff?: number;  // Pixels to cut from bottom of sprite when in water
 }
 
 export interface BreedingConfig {
@@ -91,6 +93,14 @@ export abstract class Animal extends Entity {
     protected restingDuration: number = 0;
     public insideShelter: boolean = false;  // True when hidden inside a shelter
 
+    // Swimming
+    protected swimCheckTimer: number = 0;
+    protected swimCheckInterval: number = 30;  // Will be randomized 20-40 seconds
+    protected swimTimer: number = 0;
+    protected swimDuration: number = 0;
+    protected targetWaterX: number = 0;
+    protected targetWaterY: number = 0;
+
     // Breeding
     protected isPregnant: boolean = false;
     protected pregnancyTimer: number = 0;
@@ -109,6 +119,8 @@ export abstract class Animal extends Entity {
     public foliageNeeds: Record<string, number>;
     public socialNeeds: AnimalConfig['socialNeeds'];
     public needsShelter: boolean;
+    public waterAffinity: number;  // 0-1: How much the animal likes water
+    public waterSpriteCutoff: number;  // Pixels to cut from bottom of sprite when in water
 
     // Happiness calculation
     protected happinessCheckTimer: number = 0;
@@ -155,6 +167,8 @@ export abstract class Animal extends Entity {
         this.foliageNeeds = config.foliageNeeds || {};
         this.socialNeeds = config.socialNeeds;
         this.needsShelter = config.needsShelter || false;
+        this.waterAffinity = config.waterAffinity || 0;
+        this.waterSpriteCutoff = config.waterSpriteCutoff || 8;  // Default 8 pixels
 
         // Breeding config with defaults
         this.breedingConfig = config.breedingConfig || {
@@ -179,6 +193,7 @@ export abstract class Animal extends Entity {
         this.updateState(dt);
         this.updateEating(dt);
         this.updateResting(dt);
+        this.updateSwimming(dt);
         this.updateMovement(dt);
     }
 
@@ -934,7 +949,7 @@ export abstract class Animal extends Entity {
                 console.log(`${this.name} requesting path to approach tile (${this.shelterApproachX}, ${this.shelterApproachY}) from (${this.tileX}, ${this.tileY})`);
                 console.log(`  - Approach tile terrain: ${approachTile?.terrain}, path: ${approachTile?.path}, fences: N=${approachTile?.fences?.north}, S=${approachTile?.fences?.south}, E=${approachTile?.fences?.east}, W=${approachTile?.fences?.west}`);
 
-                this.requestPath(this.shelterApproachX, this.shelterApproachY, false, false).then(success => {
+                this.requestPath(this.shelterApproachX, this.shelterApproachY, false, false, undefined, this.waterAffinity).then(success => {
                     if (!success) {
                         // Can't reach shelter, give up
                         console.log(`${this.name} FAILED to path to shelter approach, giving up`);
@@ -971,6 +986,201 @@ export abstract class Animal extends Entity {
         this.targetShelter = null;
         this.shelterInteractionIndex = -1;
         this.setState('idle', 2);
+    }
+
+    /**
+     * Update swimming behavior
+     * Option D: Bell Curve Scaling
+     * - Check interval: 20-40 seconds (random)
+     * - Swim probability: waterAffinity * 1.5
+     * - Swim duration: baseDuration * (0.5 + waterAffinity)
+     */
+    protected updateSwimming(dt: number): void {
+        // Only animals with water affinity can swim
+        if (this.waterAffinity <= 0) return;
+
+        // If currently swimming
+        if (this.state === 'swimming') {
+            // Check if we've reached the water tile
+            const currentTile = this.game.world.getTile(this.tileX, this.tileY);
+            const inWater = currentTile?.terrain === 'fresh_water' || currentTile?.terrain === 'salt_water';
+
+            if (inWater) {
+                // We're in water, count down swim timer
+                this.swimTimer += dt;
+
+                if (this.swimTimer >= this.swimDuration) {
+                    // Done swimming, find land and exit
+                    this.exitWater();
+                } else if (!this.isMoving && this.currentPath.length === 0) {
+                    // Idle in water - occasionally move to adjacent water tile
+                    if (Math.random() < 0.3) {
+                        this.pickRandomWaterTarget();
+                    }
+                }
+            } else {
+                // Still heading to water
+                if (!this.isMoving && this.currentPath.length === 0 && !this.pathPending) {
+                    // Request path to water target
+                    this.requestPath(this.targetWaterX, this.targetWaterY, false, false, undefined, this.waterAffinity).then(success => {
+                        if (!success) {
+                            // Can't reach water, give up
+                            this.setState('idle', 2);
+                            this.resetSwimCheckTimer();
+                        }
+                    });
+                }
+            }
+            return;
+        }
+
+        // Periodic swim check (only when idle or walking)
+        if (this.state !== 'idle' && this.state !== 'walking') return;
+
+        this.swimCheckTimer += dt;
+
+        if (this.swimCheckTimer >= this.swimCheckInterval) {
+            this.resetSwimCheckTimer();
+
+            // Option D formula: probability = waterAffinity * 1.5
+            const swimProbability = this.waterAffinity * 1.5;
+
+            if (Math.random() < swimProbability) {
+                // Animal wants to swim!
+                const waterTile = this.findNearbyWater();
+                if (waterTile) {
+                    this.targetWaterX = waterTile.x;
+                    this.targetWaterY = waterTile.y;
+                    this.swimTimer = 0;
+
+                    // Option D formula: duration = baseDuration * (0.5 + waterAffinity)
+                    const baseDuration = 20; // 20 seconds base
+                    this.swimDuration = baseDuration * (0.5 + this.waterAffinity);
+
+                    this.setState('swimming', 120); // Long timeout to reach and swim
+                    this.clearPath();
+
+                    // Request path to water
+                    this.requestPath(this.targetWaterX, this.targetWaterY, false, false, undefined, this.waterAffinity);
+                }
+            }
+        }
+    }
+
+    /**
+     * Reset swim check timer with random interval (20-40 seconds)
+     */
+    protected resetSwimCheckTimer(): void {
+        this.swimCheckTimer = 0;
+        this.swimCheckInterval = 20 + Math.random() * 20; // 20-40 seconds
+    }
+
+    /**
+     * Find a nearby water tile in the exhibit
+     */
+    protected findNearbyWater(): { x: number; y: number } | null {
+        const exhibit = this.game.getExhibitAtTile?.(this.tileX, this.tileY);
+        if (!exhibit) return null;
+
+        const interiorTiles = exhibit.interiorTiles || [];
+        const waterTiles: { x: number; y: number; dist: number }[] = [];
+
+        for (const pos of interiorTiles) {
+            const tile = this.game.world.getTile(pos.x, pos.y);
+            if (tile && (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water')) {
+                const dist = Math.abs(pos.x - this.tileX) + Math.abs(pos.y - this.tileY);
+                waterTiles.push({ x: pos.x, y: pos.y, dist });
+            }
+        }
+
+        if (waterTiles.length === 0) return null;
+
+        // Pick a random water tile, weighted towards closer ones
+        waterTiles.sort((a, b) => a.dist - b.dist);
+
+        // Take from the closer half
+        const halfLength = Math.max(1, Math.floor(waterTiles.length / 2));
+        const choice = waterTiles[Math.floor(Math.random() * halfLength)];
+
+        return { x: choice.x, y: choice.y };
+    }
+
+    /**
+     * Pick a random adjacent water tile for swimming around
+     */
+    protected pickRandomWaterTarget(): void {
+        const directions = [
+            { dx: 1, dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 0, dy: -1 },
+        ];
+
+        // Shuffle
+        for (let i = directions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [directions[i], directions[j]] = [directions[j], directions[i]];
+        }
+
+        for (const dir of directions) {
+            const targetX = this.tileX + dir.dx;
+            const targetY = this.tileY + dir.dy;
+            const tile = this.game.world.getTile(targetX, targetY);
+
+            if (tile && (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') &&
+                !this.isMovementBlocked(this.tileX, this.tileY, targetX, targetY)) {
+                this.targetTileX = targetX;
+                this.targetTileY = targetY;
+                this.isMoving = true;
+                return;
+            }
+        }
+    }
+
+    /**
+     * Exit water and return to land
+     */
+    protected exitWater(): void {
+        // Find nearest land tile
+        const landTile = this.findNearbyLand();
+        if (landTile) {
+            this.clearPath();
+            this.requestPath(landTile.x, landTile.y, false, false, undefined, this.waterAffinity).then(success => {
+                if (success) {
+                    this.setState('walking', 30);
+                } else {
+                    this.setState('idle', 2);
+                }
+            });
+        } else {
+            this.setState('idle', 2);
+        }
+        this.resetSwimCheckTimer();
+    }
+
+    /**
+     * Find a nearby land tile (non-water) in the exhibit
+     */
+    protected findNearbyLand(): { x: number; y: number } | null {
+        const exhibit = this.game.getExhibitAtTile?.(this.tileX, this.tileY);
+        if (!exhibit) return null;
+
+        const interiorTiles = exhibit.interiorTiles || [];
+        const landTiles: { x: number; y: number; dist: number }[] = [];
+
+        for (const pos of interiorTiles) {
+            const tile = this.game.world.getTile(pos.x, pos.y);
+            if (tile && tile.terrain !== 'fresh_water' && tile.terrain !== 'salt_water' && !tile.path) {
+                const dist = Math.abs(pos.x - this.tileX) + Math.abs(pos.y - this.tileY);
+                landTiles.push({ x: pos.x, y: pos.y, dist });
+            }
+        }
+
+        if (landTiles.length === 0) return null;
+
+        // Return closest land tile
+        landTiles.sort((a, b) => a.dist - b.dist);
+        return { x: landTiles[0].x, y: landTiles[0].y };
     }
 
     /**
@@ -1093,7 +1303,7 @@ export abstract class Animal extends Entity {
             this.pathTarget.x !== targetX ||
             this.pathTarget.y !== targetY) {
 
-            const success = await this.requestPath(targetX, targetY, false, false);
+            const success = await this.requestPath(targetX, targetY, false, false, undefined, this.waterAffinity);
 
             if (!success) {
                 this.targetFoodPile = null;
@@ -1124,6 +1334,12 @@ export abstract class Animal extends Entity {
             const targetX = this.tileX + dir.dx;
             const targetY = this.tileY + dir.dy;
 
+            // Don't randomly walk into water - only go in water intentionally when swimming
+            const tile = this.game.world.getTile(targetX, targetY);
+            if (tile && (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water')) {
+                continue;
+            }
+
             if (this.canWalkOn(targetX, targetY) &&
                 !this.isMovementBlocked(this.tileX, this.tileY, targetX, targetY)) {
                 this.targetTileX = targetX;
@@ -1140,7 +1356,13 @@ export abstract class Animal extends Entity {
     protected canWalkOn(tileX: number, tileY: number): boolean {
         const tile = this.game.world.getTile(tileX, tileY);
         if (!tile) return false;
-        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
+
+        // Water tiles: only allowed if animal has water affinity > 0
+        if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') {
+            if (this.waterAffinity <= 0) return false;
+            // Animals with water affinity can swim
+        }
+
         if (tile.path) return false; // Animals avoid paths
 
         // Can't walk through shelters/placeables (except entrance tile when heading there)
@@ -1180,6 +1402,14 @@ export abstract class Animal extends Entity {
         if (this.isAdult()) return 1.0;
         const growthProgress = this.age / this.maturityAge;
         return 0.4 + growthProgress * 0.6;
+    }
+
+    /**
+     * Check if animal is currently in water
+     */
+    isInWater(): boolean {
+        const tile = this.game.world.getTile(this.tileX, this.tileY);
+        return tile?.terrain === 'fresh_water' || tile?.terrain === 'salt_water';
     }
 
     /**

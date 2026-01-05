@@ -182,7 +182,8 @@ export abstract class Entity {
         endY: number,
         canUsePaths: boolean = true,
         canPassGates: boolean = false,
-        maxOffPathDistance?: number
+        maxOffPathDistance?: number,
+        waterAffinity?: number
     ): Promise<boolean> {
         if (this.pathPending) return false;
 
@@ -197,7 +198,8 @@ export abstract class Entity {
                 endY,
                 canUsePaths,
                 canPassGates,
-                maxOffPathDistance
+                maxOffPathDistance,
+                waterAffinity
             );
 
             this.pathPending = false;

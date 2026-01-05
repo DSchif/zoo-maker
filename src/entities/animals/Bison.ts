@@ -14,6 +14,8 @@ export const BisonInfo = {
     size: 'Large',
     temperament: 'Herd Animal',
     biome: 'prairie',
+    waterAffinity: 0.05,  // ~5% of time in water, will wade and cross rivers
+    waterSpriteCutoff: 12,  // Pixels to cut from bottom when in water (bison are larger)
 
     terrainNeeds: {
         prairie: 0.5,
@@ -71,6 +73,8 @@ export class Bison extends Animal {
             socialNeeds: BisonInfo.socialNeeds,
             maturityAge: 730, // 2 years
             breedingConfig: BisonInfo.breedingConfig,
+            waterAffinity: BisonInfo.waterAffinity,
+            waterSpriteCutoff: BisonInfo.waterSpriteCutoff,
         };
 
         super(game, tileX, tileY, config);

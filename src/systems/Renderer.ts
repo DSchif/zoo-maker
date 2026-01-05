@@ -1,4 +1,4 @@
-import { Container, Graphics, RenderTexture, Sprite, Assets, Texture, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, RenderTexture, Sprite, Assets, Texture, Text, TextStyle, Rectangle } from 'pixi.js';
 import type { Game } from '../core/Game';
 import type { Chunk, TileData, TileEdge, EdgeDirection, FenceCondition } from '../core/types';
 import { PLACEABLE_CONFIGS } from '../core/types';
@@ -2006,6 +2006,27 @@ export class Renderer {
                         const g = this.getPooledGraphics();
                         g.zIndex = item.depth;
                         this.drawAnimal(g, item.screenX, item.screenY, item.entity);
+
+                        // Apply mask if animal is in water
+                        const animalTile = this.game.world.getTile(item.entity.tileX, item.entity.tileY);
+                        const isInWater = animalTile?.terrain === 'fresh_water' || animalTile?.terrain === 'salt_water';
+                        if (isInWater) {
+                            const cutoff = item.entity.waterSpriteCutoff || 8;
+                            const scale = item.entity.scale || 1;
+                            const ageScale = item.entity.getAgeScale?.() || 1;
+                            const scaledCutoff = cutoff * scale * ageScale;
+
+                            const mask = this.getPooledGraphics();
+                            const size = 40 * scale * ageScale;
+                            mask.rect(
+                                item.screenX - size / 2,
+                                item.screenY - size,
+                                size,
+                                size - scaledCutoff
+                            );
+                            mask.fill({ color: 0xffffff });
+                            g.mask = mask;
+                        }
                     }
                     break;
                 case 'staff':
@@ -2269,6 +2290,39 @@ export class Renderer {
         const speciesScale = animal.scale || 1;
         const baseScale = 0.6; // Reduced from 1.2 since sprites are 2x size
         sprite.scale.set(ageScale * baseScale * speciesScale);
+
+        // Check if animal is in water by checking the tile directly
+        const animalTile = this.game.world.getTile(animal.tileX, animal.tileY);
+        const isInWater = animalTile?.terrain === 'fresh_water' || animalTile?.terrain === 'salt_water';
+
+        if (isInWater) {
+            const cutoff = animal.waterSpriteCutoff || 8;
+            const totalScale = ageScale * baseScale * speciesScale;
+
+            // Create a cropped texture frame to hide bottom portion
+            // This is more performant than masking and works reliably in PixiJS v8
+            const originalFrame = texture.frame;
+            // Calculate texture pixels to crop (cutoff is in screen pixels at current scale)
+            const texturePixelsToCrop = cutoff / totalScale;
+            const cropHeight = Math.max(1, originalFrame.height - texturePixelsToCrop);
+
+            // Create a new texture with cropped frame
+            const croppedTexture = new Texture({
+                source: texture.source,
+                frame: new Rectangle(
+                    originalFrame.x,
+                    originalFrame.y,
+                    originalFrame.width,
+                    cropHeight
+                )
+            });
+
+            // Update the sprite with cropped texture
+            sprite.texture = croppedTexture;
+            sprite.anchor.set(0.5, 1);
+            // Keep sprite at same position - the cutoff makes them look submerged
+            // No position adjustment needed since we want them to look like they're in the water
+        }
     }
 
     /**

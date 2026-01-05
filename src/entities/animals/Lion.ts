@@ -14,6 +14,8 @@ export const LionInfo = {
     size: 'Large',
     temperament: 'Territorial',
     biome: 'savanna_grass',
+    waterAffinity: 0.03,  // ~3% of time in water, can swim but rarely choose to
+    waterSpriteCutoff: 14,  // Pixels to cut from bottom when in water
 
     terrainNeeds: {
         savanna_grass: 0.6,
@@ -68,6 +70,8 @@ export class Lion extends Animal {
             needsShelter: true,  // Lions need shelter for happiness
             maturityAge: 730, // 2 years
             breedingConfig: LionInfo.breedingConfig,
+            waterAffinity: LionInfo.waterAffinity,
+            waterSpriteCutoff: LionInfo.waterSpriteCutoff,
         };
 
         super(game, tileX, tileY, config);

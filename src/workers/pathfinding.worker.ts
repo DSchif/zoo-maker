@@ -134,7 +134,7 @@ self.onmessage = (e: MessageEvent) => {
  * A* pathfinding algorithm
  */
 function findPath(request: PathRequest): PathResponse {
-    const { id, entityId, startX, startY, endX, endY, canUsePaths, canPassGates, maxOffPathDistance } = request;
+    const { id, entityId, startX, startY, endX, endY, canUsePaths, canPassGates, maxOffPathDistance, waterAffinity } = request;
 
     // Quick validation
     if (!worldData) {
@@ -148,7 +148,7 @@ function findPath(request: PathRequest): PathResponse {
 
     // Check if destination is valid (allow blocked tiles as destination - e.g., shelter entrances)
     // Also allow destinations beyond maxOffPathDistance (building entrances may be off-path)
-    if (!isValidTile(endX, endY, canUsePaths, true, maxOffPathDistance)) {
+    if (!isValidTile(endX, endY, canUsePaths, true, maxOffPathDistance, waterAffinity)) {
         return { id, entityId, path: [], success: false };
     }
 
@@ -189,7 +189,7 @@ function findPath(request: PathRequest): PathResponse {
 
             // Check if we can move to this tile (allow destination even if blocked/off-path)
             const isDestTile = neighbor.x === endX && neighbor.y === endY;
-            if (!isValidTile(neighbor.x, neighbor.y, canUsePaths, isDestTile, maxOffPathDistance)) continue;
+            if (!isValidTile(neighbor.x, neighbor.y, canUsePaths, isDestTile, maxOffPathDistance, waterAffinity)) continue;
 
             // Check if movement is blocked by fence
             if (isMovementBlocked(current.x, current.y, neighbor.x, neighbor.y, canPassGates)) {
@@ -257,11 +257,17 @@ function isValidTile(
     y: number,
     canUsePaths: boolean,
     isDestination: boolean = false,
-    maxOffPathDistance?: number
+    maxOffPathDistance?: number,
+    waterAffinity?: number
 ): boolean {
     const tile = getTile(x, y);
     if (!tile) return false;
-    if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') return false;
+
+    // Water tiles: only allowed if waterAffinity > 0
+    if (tile.terrain === 'fresh_water' || tile.terrain === 'salt_water') {
+        if (!waterAffinity || waterAffinity <= 0) return false;
+        // Entity with water affinity can swim through water
+    }
 
     // Animals can't walk on paths
     if (!canUsePaths && tile.path) return false;

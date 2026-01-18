@@ -28,6 +28,22 @@ import { Shelter } from '../entities/Shelter';
 import { Placeable } from '../entities/Placeable';
 
 /**
+ * Historical stats snapshot for tracking zoo performance over time
+ */
+export interface HistoricalStats {
+    day: number;
+    date: string;
+    animalHappiness: number;
+    guestHappiness: number;
+    guestHunger: number;
+    guestThirst: number;
+    guestBathroom: number;
+    guestCount: number;
+    animalCount: number;
+    money: number;
+}
+
+/**
  * Main Game class - orchestrates all game systems.
  *
  * Architecture:
@@ -81,6 +97,10 @@ export class Game {
     // Zoo stats
     public zooName: string = 'My Zoo';
     public totalVisitors: number = 0;
+
+    // Historical stats tracking
+    public historicalStats: HistoricalStats[] = [];
+    private readonly maxHistoryDays: number = 60; // Keep last 60 days
 
     // Fence condition tracking
     // Key format: "x,y,edge" -> { condition, timeUntilNextDegradation }
@@ -530,8 +550,56 @@ export class Game {
      * Called when a new day starts
      */
     private onNewDay(): void {
-        // TODO: Daily events (staff salaries, guest spawning, etc.)
+        // Record historical stats
+        this.recordHistoricalStats();
+
         console.log(`${this.getDateString()} - Day ${this.totalDays}`);
+    }
+
+    /**
+     * Record current stats for historical tracking
+     */
+    private recordHistoricalStats(): void {
+        // Calculate average animal happiness
+        let animalHappiness = 0;
+        if (this.animals.length > 0) {
+            const total = this.animals.reduce((sum, a) => sum + (a.happiness || 0), 0);
+            animalHappiness = total / this.animals.length;
+        }
+
+        // Calculate guest stats
+        const activeGuests = this.guests.filter(g => g.state !== 'left');
+        let guestHappiness = 0;
+        let guestHunger = 0;
+        let guestThirst = 0;
+        let guestBathroom = 0;
+
+        if (activeGuests.length > 0) {
+            guestHappiness = activeGuests.reduce((sum, g) => sum + (g.happiness || 0), 0) / activeGuests.length;
+            guestHunger = activeGuests.reduce((sum, g) => sum + (g.hunger || 0), 0) / activeGuests.length;
+            guestThirst = activeGuests.reduce((sum, g) => sum + (g.thirst || 0), 0) / activeGuests.length;
+            guestBathroom = activeGuests.reduce((sum, g) => sum + (g.bladder || 0), 0) / activeGuests.length;
+        }
+
+        const snapshot: HistoricalStats = {
+            day: this.totalDays,
+            date: this.getDateString(),
+            animalHappiness: Math.round(animalHappiness),
+            guestHappiness: Math.round(guestHappiness),
+            guestHunger: Math.round(guestHunger),
+            guestThirst: Math.round(guestThirst),
+            guestBathroom: Math.round(guestBathroom),
+            guestCount: activeGuests.length,
+            animalCount: this.animals.length,
+            money: this.money,
+        };
+
+        this.historicalStats.push(snapshot);
+
+        // Trim history if too long
+        if (this.historicalStats.length > this.maxHistoryDays) {
+            this.historicalStats.shift();
+        }
     }
 
     /**

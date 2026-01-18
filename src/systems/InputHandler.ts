@@ -2585,6 +2585,219 @@ export class InputHandler {
                 feeInput.value = this.game.entranceFee.toString();
             };
         }
+
+        // View History button
+        const historyBtn = document.getElementById('view-history-btn');
+        if (historyBtn) {
+            historyBtn.onclick = () => this.showHistoryModal();
+        }
+    }
+
+    /**
+     * Currently selected stat for history chart
+     */
+    private currentHistoryStat: string = 'animalHappiness';
+
+    /**
+     * Show the historical stats modal
+     */
+    private showHistoryModal(): void {
+        const modal = document.getElementById('history-modal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+        this.bindHistoryModalEvents();
+        this.updateHistoryChart();
+    }
+
+    /**
+     * Hide the history modal
+     */
+    private hideHistoryModal(): void {
+        const modal = document.getElementById('history-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Bind history modal events
+     */
+    private bindHistoryModalEvents(): void {
+        // Close button
+        const closeBtn = document.getElementById('history-close-btn');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.hideHistoryModal();
+        }
+
+        // Backdrop click
+        const modal = document.getElementById('history-modal');
+        const backdrop = modal?.querySelector('.modal-backdrop');
+        if (backdrop) {
+            (backdrop as HTMLElement).onclick = () => this.hideHistoryModal();
+        }
+
+        // Stat selector buttons
+        const statBtns = document.querySelectorAll('.history-stat-btn');
+        statBtns.forEach(btn => {
+            (btn as HTMLElement).onclick = () => {
+                const stat = btn.getAttribute('data-stat');
+                if (stat) {
+                    this.currentHistoryStat = stat;
+                    // Update active button
+                    statBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.updateHistoryChart();
+                }
+            };
+        });
+    }
+
+    /**
+     * Update the history chart with current data
+     */
+    private updateHistoryChart(): void {
+        const canvas = document.getElementById('history-chart') as HTMLCanvasElement;
+        const noDataEl = document.getElementById('history-no-data');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const data = this.game.historicalStats;
+
+        // Show/hide no data message
+        if (noDataEl) {
+            noDataEl.classList.toggle('hidden', data.length > 0);
+        }
+
+        // Clear canvas
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        const width = rect.width;
+        const height = rect.height;
+        const padding = { top: 30, right: 30, bottom: 40, left: 50 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, width, height);
+
+        if (data.length === 0) {
+            ctx.fillStyle = '#888';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('No historical data yet', width / 2, height / 2);
+            return;
+        }
+
+        // Get the values for the selected stat
+        const statKey = this.currentHistoryStat as keyof typeof data[0];
+        const values = data.map(d => d[statKey] as number);
+        const maxValue = Math.max(100, ...values);
+        const minValue = 0;
+
+        // Get stat label and color
+        const statInfo: Record<string, { label: string; color: string }> = {
+            animalHappiness: { label: 'Animal Happiness (%)', color: '#2ecc71' },
+            guestHappiness: { label: 'Guest Happiness (%)', color: '#3498db' },
+            guestHunger: { label: 'Guest Hunger (%)', color: '#e74c3c' },
+            guestThirst: { label: 'Guest Thirst (%)', color: '#9b59b6' },
+            guestBathroom: { label: 'Guest Bathroom Need (%)', color: '#f39c12' },
+        };
+
+        const info = statInfo[this.currentHistoryStat] || { label: this.currentHistoryStat, color: '#4aff4a' };
+
+        // Draw title
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(info.label, width / 2, 18);
+
+        // Draw axes
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top);
+        ctx.lineTo(padding.left, height - padding.bottom);
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.stroke();
+
+        // Draw Y-axis labels
+        ctx.fillStyle = '#888';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 5; i++) {
+            const val = Math.round((maxValue - minValue) * (i / 5) + minValue);
+            const y = height - padding.bottom - (chartHeight * i / 5);
+            ctx.fillText(val.toString(), padding.left - 8, y + 4);
+
+            // Draw gridline
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+        }
+
+        // Draw X-axis labels (every few days)
+        ctx.textAlign = 'center';
+        const labelStep = Math.max(1, Math.floor(data.length / 6));
+        for (let i = 0; i < data.length; i += labelStep) {
+            const x = padding.left + (i / Math.max(1, data.length - 1)) * chartWidth;
+            ctx.fillStyle = '#888';
+            ctx.fillText(`Day ${data[i].day}`, x, height - padding.bottom + 20);
+        }
+
+        // Draw line graph
+        ctx.strokeStyle = info.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        for (let i = 0; i < values.length; i++) {
+            const x = padding.left + (i / Math.max(1, values.length - 1)) * chartWidth;
+            const normalizedValue = (values[i] - minValue) / (maxValue - minValue);
+            const y = height - padding.bottom - normalizedValue * chartHeight;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+
+        // Draw data points
+        ctx.fillStyle = info.color;
+        for (let i = 0; i < values.length; i++) {
+            const x = padding.left + (i / Math.max(1, values.length - 1)) * chartWidth;
+            const normalizedValue = (values[i] - minValue) / (maxValue - minValue);
+            const y = height - padding.bottom - normalizedValue * chartHeight;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw area fill
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = info.color;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, height - padding.bottom);
+        for (let i = 0; i < values.length; i++) {
+            const x = padding.left + (i / Math.max(1, values.length - 1)) * chartWidth;
+            const normalizedValue = (values[i] - minValue) / (maxValue - minValue);
+            const y = height - padding.bottom - normalizedValue * chartHeight;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(padding.left + chartWidth, height - padding.bottom);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
     }
 
     /**

@@ -761,6 +761,40 @@
                         <span class="star empty">★</span>
                     </div>
                 </div>
+                <div class="entrance-actions">
+                    <button id="view-history-btn" class="action-btn">
+                        <span>📊</span> View Historical Stats
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Stats Modal -->
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content history-modal-content">
+                <div class="modal-header">
+                    <span class="modal-icon">📊</span>
+                    <h2>Zoo Historical Statistics</h2>
+                </div>
+                <div class="modal-body history-modal-body">
+                    <div class="history-stat-selector">
+                        <button class="history-stat-btn active" data-stat="animalHappiness">Animal Happiness</button>
+                        <button class="history-stat-btn" data-stat="guestHappiness">Guest Happiness</button>
+                        <button class="history-stat-btn" data-stat="guestHunger">Guest Hunger</button>
+                        <button class="history-stat-btn" data-stat="guestThirst">Guest Thirst</button>
+                        <button class="history-stat-btn" data-stat="guestBathroom">Guest Bathroom</button>
+                    </div>
+                    <div class="history-chart-container">
+                        <canvas id="history-chart" width="600" height="300"></canvas>
+                    </div>
+                    <div class="history-info">
+                        <span id="history-no-data" class="history-no-data hidden">No historical data yet. Stats are recorded at the end of each day.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="history-close-btn" class="modal-btn cancel">Close</button>
+                </div>
             </div>
         </div>
 

@@ -12,6 +12,11 @@ import { TaskManager, Priority } from '../systems/TaskManager';
 import { Animal } from '../entities/Animal';
 import { Lion } from '../entities/animals/Lion';
 import { Bison } from '../entities/animals/Bison';
+import { Panda } from '../entities/animals/Panda';
+import { Elephant } from '../entities/animals/Elephant';
+import { Baboon } from '../entities/animals/Baboon';
+import { Zebra } from '../entities/animals/Zebra';
+import { Rhinoceros } from '../entities/animals/Rhinoceros';
 import { Staff } from '../entities/Staff';
 import { Zookeeper } from '../entities/staff/Zookeeper';
 import { MaintenanceWorker } from '../entities/staff/MaintenanceWorker';
@@ -645,6 +650,21 @@ export class Game {
                 break;
             case 'bison':
                 animal = new Bison(this, tileX, tileY, gender);
+                break;
+            case 'panda':
+                animal = new Panda(this, tileX, tileY, gender);
+                break;
+            case 'elephant':
+                animal = new Elephant(this, tileX, tileY, gender);
+                break;
+            case 'baboon':
+                animal = new Baboon(this, tileX, tileY, gender);
+                break;
+            case 'zebra':
+                animal = new Zebra(this, tileX, tileY, gender);
+                break;
+            case 'rhinoceros':
+                animal = new Rhinoceros(this, tileX, tileY, gender);
                 break;
             default:
                 console.warn(`Unknown species: ${species}`);

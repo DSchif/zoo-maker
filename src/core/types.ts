@@ -85,7 +85,7 @@ export interface Entity {
 }
 
 // Animal species
-export type AnimalSpecies = 'lion' | 'bison';
+export type AnimalSpecies = 'lion' | 'bison' | 'panda' | 'elephant' | 'baboon' | 'zebra' | 'rhinoceros';
 
 // Gender
 export type Gender = 'male' | 'female';

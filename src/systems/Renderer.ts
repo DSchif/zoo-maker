@@ -2271,12 +2271,28 @@ export class Renderer {
             textureName = `${baseName}_${direction}`;
         } else if (animal.species === 'bison') {
             textureName = 'bison';
+        } else if (animal.species === 'panda') {
+            textureName = 'panda';
+        } else if (animal.species === 'elephant') {
+            textureName = 'elephant';
+        } else if (animal.species === 'baboon') {
+            textureName = 'baboon';
+        } else if (animal.species === 'zebra') {
+            textureName = 'zebra';
+        } else if (animal.species === 'rhinoceros') {
+            textureName = 'rhinoceros';
         } else {
             textureName = 'lion_ne'; // fallback
         }
 
         const texture = this.textures.get(textureName);
-        if (!texture) return;
+        if (!texture) {
+            // Fallback to procedural drawing if texture not found
+            const g = this.getPooledGraphics();
+            g.zIndex = depth;
+            this.drawAnimal(g, x, y, animal);
+            return;
+        }
 
         const sprite = this.getPooledSprite(texture);
         sprite.anchor.set(0.5, 1); // Bottom center
@@ -2391,8 +2407,11 @@ export class Renderer {
      * Draw an animal with detailed textures
      */
     private drawAnimal(graphics: Graphics, x: number, y: number, animal: any): void {
-        const worldFacing = animal.facingX || 1; // 1 = right, -1 = left
-        const facing = this.adjustFacingX(worldFacing);
+        // Use 4-way facingDirection and adjust for camera rotation
+        const worldDirection = animal.facingDirection || 'ne';
+        const screenDirection = this.adjustDirection(worldDirection);
+        // Convert 4-way direction to facing: ne/se = right (1), sw/nw = left (-1)
+        const facing = (screenDirection === 'ne' || screenDirection === 'se') ? 1 : -1;
         const scale = animal.scale || 1;
         const isMoving = animal.isMoving || false;
         const animTimer = animal.animTimer || 0;
@@ -2416,6 +2435,16 @@ export class Renderer {
             this.drawLion(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
         } else if (animal.species === 'bison') {
             this.drawBison(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
+        } else if (animal.species === 'panda') {
+            this.drawPanda(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
+        } else if (animal.species === 'elephant') {
+            this.drawElephant(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
+        } else if (animal.species === 'baboon') {
+            this.drawBaboon(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
+        } else if (animal.species === 'zebra') {
+            this.drawZebra(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
+        } else if (animal.species === 'rhinoceros') {
+            this.drawRhinoceros(graphics, x, y, animal, facing, scale, legSwing, seededRandom);
         } else {
             // Generic animal
             this.drawGenericAnimal(graphics, x, y, bodyColor, headColor, facing, scale, legSwing);
@@ -2666,6 +2695,410 @@ export class Renderer {
         // Ear (small, hidden in fur)
         graphics.ellipse(headX - 5 * scale * facing, headY - 2 * scale, 2 * scale, 3 * scale);
         graphics.fill(headColor);
+    }
+
+    /**
+     * Draw a panda with distinctive black and white markings
+     */
+    private drawPanda(
+        graphics: Graphics, x: number, y: number, animal: any,
+        facing: number, scale: number, legSwing: number,
+        seededRandom: (offset: number) => number
+    ): void {
+        const bodyColor = animal.bodyColor || 0xf5f5f5;  // White
+        const patchColor = animal.patchColor || 0x1a1a1a;  // Black
+
+        // Shadow
+        graphics.ellipse(x, y + 4, 14 * scale, 7 * scale);
+        graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+        // Back legs (black)
+        const backLegX = x - 6 * scale * facing;
+        graphics.ellipse(backLegX, y + 2 + legSwing * 0.3, 4 * scale, 5 * scale);
+        graphics.fill(patchColor);
+        graphics.ellipse(backLegX - 4 * scale * facing, y + 2 - legSwing * 0.3, 4 * scale, 5 * scale);
+        graphics.fill(patchColor);
+
+        // Front legs (black)
+        const frontLegX = x + 8 * scale * facing;
+        graphics.ellipse(frontLegX, y + 2 - legSwing * 0.3, 4 * scale, 5 * scale);
+        graphics.fill(patchColor);
+        graphics.ellipse(frontLegX + 4 * scale * facing, y + 2 + legSwing * 0.3, 4 * scale, 5 * scale);
+        graphics.fill(patchColor);
+
+        // Tail (small, white)
+        const tailX = x - 14 * scale * facing;
+        graphics.circle(tailX, y - 6 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+
+        // Body (white, round)
+        graphics.ellipse(x, y - 8 * scale, 14 * scale, 10 * scale);
+        graphics.fill(bodyColor);
+
+        // Black shoulder patches
+        graphics.ellipse(x - 6 * scale * facing, y - 6 * scale, 6 * scale, 5 * scale);
+        graphics.fill(patchColor);
+        graphics.ellipse(x + 2 * scale * facing, y - 6 * scale, 5 * scale, 4 * scale);
+        graphics.fill(patchColor);
+
+        // Head (white, round)
+        const headX = x + 10 * scale * facing;
+        const headY = y - 12 * scale;
+        graphics.ellipse(headX, headY, 10 * scale, 9 * scale);
+        graphics.fill(bodyColor);
+
+        // Ears (black, round)
+        graphics.circle(headX - 7 * scale * facing, headY - 6 * scale, 4 * scale);
+        graphics.fill(patchColor);
+        graphics.circle(headX + 4 * scale * facing, headY - 7 * scale, 4 * scale);
+        graphics.fill(patchColor);
+
+        // Eye patches (black, distinctive panda marking)
+        const eyePatchY = headY + 1 * scale;
+        graphics.ellipse(headX - 3 * scale * facing, eyePatchY, 4 * scale, 3 * scale);
+        graphics.fill(patchColor);
+        graphics.ellipse(headX + 4 * scale * facing, eyePatchY, 4 * scale, 3 * scale);
+        graphics.fill(patchColor);
+
+        // Eyes (white dot in black patch)
+        graphics.circle(headX - 3 * scale * facing, eyePatchY, 1.5 * scale);
+        graphics.fill(0xffffff);
+        graphics.circle(headX + 4 * scale * facing, eyePatchY, 1.5 * scale);
+        graphics.fill(0xffffff);
+
+        // Pupils
+        graphics.circle(headX - 2.5 * scale * facing, eyePatchY, 0.8 * scale);
+        graphics.fill(0x000000);
+        graphics.circle(headX + 4.5 * scale * facing, eyePatchY, 0.8 * scale);
+        graphics.fill(0x000000);
+
+        // Nose (black)
+        graphics.ellipse(headX + 8 * scale * facing, headY + 2 * scale, 2.5 * scale, 2 * scale);
+        graphics.fill(patchColor);
+
+        // Mouth line
+        graphics.moveTo(headX + 8 * scale * facing, headY + 3 * scale);
+        graphics.lineTo(headX + 6 * scale * facing, headY + 5 * scale);
+        graphics.stroke({ color: patchColor, width: 1 });
+    }
+
+    /**
+     * Draw an elephant with trunk and large ears
+     */
+    private drawElephant(
+        graphics: Graphics, x: number, y: number, animal: any,
+        facing: number, scale: number, legSwing: number,
+        seededRandom: (offset: number) => number
+    ): void {
+        const bodyColor = animal.bodyColor || 0x7a7a7a;
+        const earColor = animal.earColor || 0x8a8a8a;
+        const tuskColor = animal.tuskColor || 0xf5f5dc;
+
+        // Shadow
+        graphics.ellipse(x, y + 4, 18 * scale, 9 * scale);
+        graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+        // Back legs (thick, columnar)
+        graphics.ellipse(x - 8 * scale * facing, y + 2 + legSwing * 0.2, 5 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x - 14 * scale * facing, y + 2 - legSwing * 0.2, 5 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+
+        // Front legs
+        graphics.ellipse(x + 8 * scale * facing, y + 2 - legSwing * 0.2, 5 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x + 14 * scale * facing, y + 2 + legSwing * 0.2, 5 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+
+        // Tail
+        const tailX = x - 18 * scale * facing;
+        graphics.moveTo(x - 14 * scale * facing, y - 6 * scale);
+        graphics.lineTo(tailX, y - 2 * scale);
+        graphics.stroke({ color: bodyColor, width: 2 * scale });
+        // Tail tuft
+        graphics.ellipse(tailX, y - 1 * scale, 2 * scale, 3 * scale);
+        graphics.fill(0x4a4a4a);
+
+        // Body (large, barrel-shaped)
+        graphics.ellipse(x, y - 10 * scale, 16 * scale, 12 * scale);
+        graphics.fill(bodyColor);
+
+        // Head
+        const headX = x + 14 * scale * facing;
+        const headY = y - 14 * scale;
+        graphics.ellipse(headX, headY, 10 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+
+        // Large ears
+        graphics.ellipse(headX - 8 * scale * facing, headY - 2 * scale, 8 * scale, 10 * scale);
+        graphics.fill(earColor);
+        graphics.ellipse(headX + 6 * scale * facing, headY - 2 * scale, 7 * scale, 9 * scale);
+        graphics.fill(earColor);
+
+        // Trunk
+        const trunkStartX = headX + 8 * scale * facing;
+        const trunkStartY = headY + 4 * scale;
+        graphics.moveTo(trunkStartX, trunkStartY);
+        graphics.quadraticCurveTo(
+            trunkStartX + 6 * scale * facing, trunkStartY + 8 * scale,
+            trunkStartX + 2 * scale * facing, trunkStartY + 14 * scale
+        );
+        graphics.stroke({ color: bodyColor, width: 4 * scale });
+
+        // Tusks (if adult)
+        if ((animal.age || 0) > 1000) {
+            graphics.moveTo(headX + 4 * scale * facing, headY + 2 * scale);
+            graphics.lineTo(headX + 10 * scale * facing, headY + 8 * scale);
+            graphics.stroke({ color: tuskColor, width: 2 * scale });
+        }
+
+        // Eyes
+        graphics.circle(headX - 2 * scale * facing, headY - 2 * scale, 1.5 * scale);
+        graphics.fill(0x1a1a1a);
+        graphics.circle(headX + 3 * scale * facing, headY - 2 * scale, 1.5 * scale);
+        graphics.fill(0x1a1a1a);
+    }
+
+    /**
+     * Draw a baboon with distinctive face and tail
+     */
+    private drawBaboon(
+        graphics: Graphics, x: number, y: number, animal: any,
+        facing: number, scale: number, legSwing: number,
+        seededRandom: (offset: number) => number
+    ): void {
+        const bodyColor = animal.bodyColor || 0x6b7b3a;
+        const faceColor = animal.faceColor || 0x4a3a2a;
+        const muzzleColor = animal.muzzleColor || 0x3a2a1a;
+
+        // Shadow
+        graphics.ellipse(x, y + 4, 10 * scale, 5 * scale);
+        graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+        // Tail (long, curved upward)
+        const tailX = x - 14 * scale * facing;
+        graphics.moveTo(x - 8 * scale * facing, y - 4 * scale);
+        graphics.quadraticCurveTo(tailX, y - 8 * scale, tailX - 2 * facing, y - 14 * scale);
+        graphics.stroke({ color: bodyColor, width: 2 * scale });
+
+        // Back legs
+        graphics.ellipse(x - 4 * scale * facing, y + 2 + legSwing * 0.4, 3 * scale, 5 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x - 8 * scale * facing, y + 2 - legSwing * 0.4, 3 * scale, 5 * scale);
+        graphics.fill(bodyColor);
+
+        // Front legs (arms)
+        graphics.ellipse(x + 6 * scale * facing, y + 1 - legSwing * 0.4, 2.5 * scale, 5 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x + 10 * scale * facing, y + 1 + legSwing * 0.4, 2.5 * scale, 5 * scale);
+        graphics.fill(bodyColor);
+
+        // Body
+        graphics.ellipse(x, y - 6 * scale, 10 * scale, 7 * scale);
+        graphics.fill(bodyColor);
+
+        // Head
+        const headX = x + 8 * scale * facing;
+        const headY = y - 12 * scale;
+        graphics.ellipse(headX, headY, 7 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+
+        // Face (darker)
+        graphics.ellipse(headX + 2 * scale * facing, headY + 1 * scale, 4 * scale, 4 * scale);
+        graphics.fill(faceColor);
+
+        // Muzzle (elongated, dog-like)
+        graphics.ellipse(headX + 6 * scale * facing, headY + 2 * scale, 3 * scale, 2.5 * scale);
+        graphics.fill(muzzleColor);
+
+        // Eyes
+        graphics.circle(headX - 1 * scale * facing, headY - 1 * scale, 1.2 * scale);
+        graphics.fill(0xffff00);  // Yellow eyes
+        graphics.circle(headX - 1 * scale * facing, headY - 1 * scale, 0.6 * scale);
+        graphics.fill(0x000000);
+
+        graphics.circle(headX + 3 * scale * facing, headY - 1 * scale, 1.2 * scale);
+        graphics.fill(0xffff00);
+        graphics.circle(headX + 3 * scale * facing, headY - 1 * scale, 0.6 * scale);
+        graphics.fill(0x000000);
+
+        // Nostrils
+        graphics.circle(headX + 7 * scale * facing, headY + 2 * scale, 0.5 * scale);
+        graphics.fill(0x1a1a1a);
+    }
+
+    /**
+     * Draw a zebra with stripes
+     */
+    private drawZebra(
+        graphics: Graphics, x: number, y: number, animal: any,
+        facing: number, scale: number, legSwing: number,
+        seededRandom: (offset: number) => number
+    ): void {
+        const bodyColor = animal.bodyColor || 0xffffff;
+        const stripeColor = animal.stripeColor || 0x1a1a1a;
+
+        // Shadow
+        graphics.ellipse(x, y + 4, 14 * scale, 7 * scale);
+        graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+        // Tail
+        const tailX = x - 14 * scale * facing;
+        graphics.moveTo(x - 10 * scale * facing, y - 4 * scale);
+        graphics.lineTo(tailX, y + 2 * scale);
+        graphics.stroke({ color: stripeColor, width: 2 * scale });
+
+        // Back legs (striped)
+        graphics.ellipse(x - 6 * scale * facing, y + 2 + legSwing * 0.3, 3 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x - 10 * scale * facing, y + 2 - legSwing * 0.3, 3 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+
+        // Front legs
+        graphics.ellipse(x + 6 * scale * facing, y + 2 - legSwing * 0.3, 3 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x + 10 * scale * facing, y + 2 + legSwing * 0.3, 3 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+
+        // Body (white base)
+        graphics.ellipse(x, y - 8 * scale, 14 * scale, 9 * scale);
+        graphics.fill(bodyColor);
+
+        // Body stripes (contained within body ellipse)
+        for (let i = -3; i <= 3; i++) {
+            const stripeX = x + i * 3 * scale;
+            graphics.moveTo(stripeX, y - 16 * scale);
+            graphics.lineTo(stripeX + 1 * scale * facing, y);
+            graphics.stroke({ color: stripeColor, width: 1.5 * scale });
+        }
+
+        // Neck
+        const neckX = x + 10 * scale * facing;
+        graphics.ellipse(neckX, y - 14 * scale, 5 * scale, 8 * scale);
+        graphics.fill(bodyColor);
+
+        // Neck stripes
+        graphics.moveTo(neckX - 2 * scale, y - 20 * scale);
+        graphics.lineTo(neckX - 1 * scale, y - 8 * scale);
+        graphics.stroke({ color: stripeColor, width: 1.5 * scale });
+        graphics.moveTo(neckX + 2 * scale, y - 20 * scale);
+        graphics.lineTo(neckX + 1 * scale, y - 8 * scale);
+        graphics.stroke({ color: stripeColor, width: 1.5 * scale });
+
+        // Head
+        const headX = x + 14 * scale * facing;
+        const headY = y - 18 * scale;
+        graphics.ellipse(headX, headY, 6 * scale, 5 * scale);
+        graphics.fill(bodyColor);
+
+        // Muzzle
+        graphics.ellipse(headX + 5 * scale * facing, headY + 2 * scale, 3 * scale, 2.5 * scale);
+        graphics.fill(bodyColor);
+        // Muzzle stripe
+        graphics.ellipse(headX + 6 * scale * facing, headY + 2 * scale, 1 * scale, 2 * scale);
+        graphics.fill(stripeColor);
+
+        // Ears
+        graphics.ellipse(headX - 3 * scale * facing, headY - 4 * scale, 2 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(headX + 2 * scale * facing, headY - 4 * scale, 2 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+
+        // Mane (short, upright)
+        for (let i = 0; i < 5; i++) {
+            const maneX = neckX - i * 2 * scale * facing;
+            graphics.moveTo(maneX, y - 14 * scale - i * 1.5 * scale);
+            graphics.lineTo(maneX, y - 18 * scale - i * 1.5 * scale);
+            graphics.stroke({ color: stripeColor, width: 2 * scale });
+        }
+
+        // Eyes
+        graphics.circle(headX - 1 * scale * facing, headY - 1 * scale, 1.2 * scale);
+        graphics.fill(0x1a1a1a);
+        graphics.circle(headX + 2 * scale * facing, headY - 1 * scale, 1.2 * scale);
+        graphics.fill(0x1a1a1a);
+    }
+
+    /**
+     * Draw a rhinoceros with horn and thick body
+     */
+    private drawRhinoceros(
+        graphics: Graphics, x: number, y: number, animal: any,
+        facing: number, scale: number, legSwing: number,
+        seededRandom: (offset: number) => number
+    ): void {
+        const bodyColor = animal.bodyColor || 0x5a5a5a;
+        const hornColor = animal.hornColor || 0x3a3a3a;
+
+        // Shadow
+        graphics.ellipse(x, y + 4, 16 * scale, 8 * scale);
+        graphics.fill({ color: 0x000000, alpha: 0.2 });
+
+        // Tail (small)
+        const tailX = x - 16 * scale * facing;
+        graphics.moveTo(x - 12 * scale * facing, y - 6 * scale);
+        graphics.lineTo(tailX, y - 4 * scale);
+        graphics.stroke({ color: bodyColor, width: 2 * scale });
+
+        // Back legs (thick)
+        graphics.ellipse(x - 6 * scale * facing, y + 2 + legSwing * 0.2, 5 * scale, 7 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x - 12 * scale * facing, y + 2 - legSwing * 0.2, 5 * scale, 7 * scale);
+        graphics.fill(bodyColor);
+
+        // Front legs
+        graphics.ellipse(x + 6 * scale * facing, y + 2 - legSwing * 0.2, 5 * scale, 7 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(x + 12 * scale * facing, y + 2 + legSwing * 0.2, 5 * scale, 7 * scale);
+        graphics.fill(bodyColor);
+
+        // Body (massive, barrel-shaped)
+        graphics.ellipse(x, y - 8 * scale, 16 * scale, 11 * scale);
+        graphics.fill(bodyColor);
+
+        // Head
+        const headX = x + 14 * scale * facing;
+        const headY = y - 10 * scale;
+        graphics.ellipse(headX, headY, 8 * scale, 6 * scale);
+        graphics.fill(bodyColor);
+
+        // Snout
+        graphics.ellipse(headX + 6 * scale * facing, headY + 2 * scale, 4 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+
+        // Horn (primary)
+        const hornX = headX + 8 * scale * facing;
+        const hornY = headY - 2 * scale;
+        graphics.moveTo(hornX, hornY + 2 * scale);
+        graphics.lineTo(hornX + 2 * scale * facing, hornY - 6 * scale);
+        graphics.lineTo(hornX - 1 * scale * facing, hornY + 2 * scale);
+        graphics.fill(hornColor);
+
+        // Second horn (smaller)
+        graphics.moveTo(headX + 4 * scale * facing, headY - 3 * scale);
+        graphics.lineTo(headX + 5 * scale * facing, headY - 6 * scale);
+        graphics.lineTo(headX + 3 * scale * facing, headY - 3 * scale);
+        graphics.fill(hornColor);
+
+        // Ears (small, pointed)
+        graphics.ellipse(headX - 4 * scale * facing, headY - 4 * scale, 2 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+        graphics.ellipse(headX + 1 * scale * facing, headY - 5 * scale, 2 * scale, 3 * scale);
+        graphics.fill(bodyColor);
+
+        // Eyes (small)
+        graphics.circle(headX - 2 * scale * facing, headY, 1 * scale);
+        graphics.fill(0x1a1a1a);
+        graphics.circle(headX + 2 * scale * facing, headY, 1 * scale);
+        graphics.fill(0x1a1a1a);
+
+        // Skin folds
+        graphics.moveTo(x - 4 * scale, y - 14 * scale);
+        graphics.lineTo(x - 2 * scale, y - 2 * scale);
+        graphics.stroke({ color: 0x4a4a4a, width: 1 * scale });
+        graphics.moveTo(x + 4 * scale, y - 14 * scale);
+        graphics.lineTo(x + 2 * scale, y - 2 * scale);
+        graphics.stroke({ color: 0x4a4a4a, width: 1 * scale });
     }
 
     /**

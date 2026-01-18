@@ -2,6 +2,11 @@ import type { Game } from '../core/Game';
 import type { GridPos, EdgeDirection, FenceType, AnimalSpecies, FoliageType, TileEdge, TerrainType, PathType, Gender, ShelterSize } from '../core/types';
 import { LionInfo } from '../entities/animals/Lion';
 import { BisonInfo } from '../entities/animals/Bison';
+import { PandaInfo } from '../entities/animals/Panda';
+import { ElephantInfo } from '../entities/animals/Elephant';
+import { BaboonInfo } from '../entities/animals/Baboon';
+import { ZebraInfo } from '../entities/animals/Zebra';
+import { RhinocerosInfo } from '../entities/animals/Rhinoceros';
 import { FoliageTypes } from '../entities/Foliage';
 
 /**
@@ -18,6 +23,11 @@ interface UndoAction {
 const ANIMAL_INFO: Record<string, any> = {
     lion: LionInfo,
     bison: BisonInfo,
+    panda: PandaInfo,
+    elephant: ElephantInfo,
+    baboon: BaboonInfo,
+    zebra: ZebraInfo,
+    rhinoceros: RhinocerosInfo,
 };
 
 /**
@@ -202,6 +212,9 @@ export class InputHandler {
 
     // Active building submenu tab
     private activeBuildingTab: string = 'buildings';
+
+    // Active animal submenu tab (animals or shelters)
+    private activeAnimalTab: string = 'animals';
 
     // Gate relocation mode
     public isGateRelocateMode: boolean = false;
@@ -622,6 +635,11 @@ export class InputHandler {
             animal: [
                 { id: 'lion', name: 'Lion', cost: 2500, icon: '🦁' },
                 { id: 'bison', name: 'American Bison', cost: 1800, icon: '🦬' },
+                { id: 'panda', name: 'Giant Panda', cost: 5000, icon: '🐼' },
+                { id: 'elephant', name: 'African Elephant', cost: 2500, icon: '🐘' },
+                { id: 'baboon', name: 'Olive Baboon', cost: 900, icon: '🐒' },
+                { id: 'zebra', name: 'Plains Zebra', cost: 800, icon: '🦓' },
+                { id: 'rhinoceros', name: 'Black Rhinoceros', cost: 1200, icon: '🦏' },
             ],
             staff: [
                 { id: 'zookeeper', name: 'Zookeeper', cost: 500, icon: '🧑‍🌾' },
@@ -838,6 +856,106 @@ export class InputHandler {
             return;
         }
 
+        // Handle animal tool with tabs (Animals and Shelters)
+        if (tool === 'animal') {
+            const activeTab = this.activeAnimalTab || 'animals';
+            const animalItems = submenus.animal;
+            const shelterItems = submenus.shelter;
+            const activeItems = activeTab === 'animals' ? animalItems : shelterItems;
+
+            let submenuHTML = `
+                <div class="submenu-tabs">
+                    <button class="submenu-tab ${activeTab === 'animals' ? 'active' : ''}" data-tab="animals">🦁 Animals</button>
+                    <button class="submenu-tab ${activeTab === 'shelters' ? 'active' : ''}" data-tab="shelters">🏠 Shelters</button>
+                </div>
+                <div class="submenu-scroll-container">
+            `;
+
+            submenuHTML += activeItems.map((item, index) => `
+                <div class="submenu-item ${index === 0 ? 'selected' : ''}" data-item="${item.id}">
+                    <span class="icon">${item.icon}</span>
+                    <div class="details">
+                        <div class="name">${item.name}</div>
+                        <div class="cost">$${item.cost}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            submenuHTML += '</div>';
+
+            // Add rotation controls for shelters tab
+            if (activeTab === 'shelters') {
+                const rotationLabels = ['0°', '90°', '180°', '270°'];
+                submenuHTML += `
+                    <div class="rotation-control">
+                        <span class="rotation-label">Rotation:</span>
+                        <div class="rotation-buttons">
+                            <button id="rotate-left" class="rotate-btn" title="Rotate Left">↺</button>
+                            <span id="rotation-value">${rotationLabels[this.placementRotation]}</span>
+                            <button id="rotate-right" class="rotate-btn" title="Rotate Right">↻</button>
+                        </div>
+                        <span class="rotation-hint">[R]</span>
+                    </div>
+                `;
+            }
+
+            submenuContent.innerHTML = submenuHTML;
+
+            // Bind tab click events
+            const tabButtons = submenuContent.querySelectorAll('.submenu-tab');
+            tabButtons.forEach(tabEl => {
+                tabEl.addEventListener('click', () => {
+                    const tabId = (tabEl as HTMLElement).dataset.tab;
+                    if (tabId) {
+                        this.activeAnimalTab = tabId;
+                        // Switch to shelter tool internally when on shelters tab
+                        if (tabId === 'shelters') {
+                            this.game.setTool('shelter');
+                        } else {
+                            this.game.setTool('animal');
+                        }
+                        this.updateSubmenu('animal');
+                    }
+                });
+            });
+
+            // Bind item click events
+            const submenuItems = submenuContent.querySelectorAll('.submenu-item');
+            submenuItems.forEach(itemEl => {
+                itemEl.addEventListener('click', () => {
+                    submenuItems.forEach(el => el.classList.remove('selected'));
+                    itemEl.classList.add('selected');
+                    const itemId = (itemEl as HTMLElement).dataset.item;
+                    if (itemId) {
+                        this.game.setItem(itemId);
+                        if (activeTab === 'animals') {
+                            this.showAnimalInfo(itemId);
+                            this.hideFoliageInfo();
+                        }
+                    }
+                });
+            });
+
+            // Bind rotation button events for shelters
+            if (activeTab === 'shelters') {
+                const rotateLeftBtn = document.getElementById('rotate-left');
+                rotateLeftBtn?.addEventListener('click', () => this.rotatePlacementLeft());
+                const rotateRightBtn = document.getElementById('rotate-right');
+                rotateRightBtn?.addEventListener('click', () => this.rotatePlacementRight());
+            }
+
+            // Select first item
+            if (activeItems.length > 0) {
+                this.game.setItem(activeItems[0].id);
+                if (activeTab === 'animals') {
+                    this.showAnimalInfo(activeItems[0].id);
+                }
+            }
+
+            submenuPanel.classList.remove('hidden');
+            return;
+        }
+
         const items = submenus[tool];
 
         if (!items || items.length === 0) {
@@ -1003,7 +1121,8 @@ export class InputHandler {
         const terrainEl = document.getElementById('animal-info-terrain');
         const foliageEl = document.getElementById('animal-info-foliage');
 
-        if (iconEl) iconEl.textContent = animalId === 'lion' ? '🦁' : '🦬';
+        const animalIcons: Record<string, string> = { lion: '🦁', bison: '🦬', panda: '🐼', elephant: '🐘', baboon: '🐒', zebra: '🦓', rhinoceros: '🦏' };
+        if (iconEl) iconEl.textContent = animalIcons[animalId] || '🐾';
         if (nameEl) nameEl.textContent = info.speciesName;
         if (scientificEl) scientificEl.textContent = info.scientificName;
         if (descEl) descEl.textContent = info.description;
@@ -4103,7 +4222,7 @@ export class InputHandler {
      */
     private placeAnimal(x: number, y: number, species: string): void {
         const costs: Record<string, number> = {
-            lion: 2500, bison: 1800
+            lion: 2500, bison: 1800, panda: 5000, elephant: 2500, baboon: 900, zebra: 800, rhinoceros: 1200
         };
 
         const cost = costs[species] || 500;

@@ -535,12 +535,6 @@ export class Placeable {
                 // Check for foliage at this tile
                 const foliageAtTile = game.getFoliageAtTile(x, y);
                 if (foliageAtTile.length > 0) return false;
-
-                // Check for ANY fences on this tile's edges
-                // Buildings cannot be placed where fences exist
-                if (tile.fences.north || tile.fences.south || tile.fences.east || tile.fences.west) {
-                    return false;
-                }
             }
         }
 
